@@ -1,0 +1,14 @@
+# Cloudflare Pages reads this file to set response headers.
+# Hashed asset filenames change whenever the contents change, so they can be
+# cached indefinitely; index.html must not be, or visitors keep an old build.
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
