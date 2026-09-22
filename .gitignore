@@ -24,6 +24,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Claude Code local overrides
+# Claude Code local overrides and session state
 CLAUDE.local.md
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
