@@ -41,13 +41,32 @@ test ที่ผ่านทั้ง 87 ตัวพิสูจน์แค�
 ยอดคงเหลือสัก 3-5 งวด ถ้าคลาดเคลื่อนเกินหลักสิบบาทแปลว่าสมมติฐานใน
 [REQUIREMENTS §2.4](REQUIREMENTS.md) ข้อใดข้อหนึ่งผิด
 
-### 2. รอ DNS ของ charus.xyz เผยแพร่
+### 2. รอ DNS cache ของ charus.xyz หมดอายุ
 
-- โดเมนจดที่ Porkbun แล้ว ใส่ nameserver ของ Cloudflare แล้ว
-  (`cullen.ns.cloudflare.com`, `grace.ns.cloudflare.com`)
-- registry ของ `.xyz` ยังไม่เผยแพร่ — ตรวจด้วย `Resolve-DnsName charus.xyz -Type NS -Server 8.8.8.8`
-- พอขึ้นแล้ว: Worker → แท็บ **Domains** → **Add** → `loan.charus.xyz`
-- ขั้นตอนเต็มอยู่ใน [DEPLOY.md](DEPLOY.md)
+**การตั้งค่าเสร็จครบแล้วทุกขั้น** เหลือแค่รอ ไม่ต้องแก้อะไรเพิ่ม
+
+ตรวจสอบเมื่อ 2026-09-22:
+
+| จุดตรวจ | สถานะ |
+|---|---|
+| WHOIS ที่ registry | ✅ nameserver เป็น `cullen.ns.cloudflare.com`, `grace.ns.cloudflare.com` |
+| Cloudflare รับ zone | ✅ ถาม NS ตรงๆ ได้ SOA กลับมา |
+| Cloudflare ขึ้น Active | ⏳ กด "Check nameservers now" แล้ว ตอบว่ารอไม่กี่ชั่วโมง |
+| resolver สาธารณะ (8.8.8.8, 1.1.1.1, 9.9.9.9) | ⏳ ยังตอบ `*.ns.porkbun.com` จาก cache เก่า |
+
+คำสั่งตรวจ:
+
+```powershell
+Resolve-DnsName charus.xyz -Type NS -Server 8.8.8.8
+```
+
+เห็น `*.ns.cloudflare.com` เมื่อไหร่แปลว่าพร้อม
+
+**อย่าแก้ nameserver ซ้ำหรือลบโดเมนออกจาก Cloudflare แล้วเพิ่มใหม่** — WHOIS
+ยืนยันแล้วว่าตั้งถูก การแก้ซ้ำจะรีเซ็ตเวลารอและทำให้ช้าลงเท่านั้น
+
+พอ Cloudflare ขึ้น Active: Worker → แท็บ **Domains** → **Add** → `loan.charus.xyz`
+ขั้นตอนเต็มอยู่ใน [DEPLOY.md](DEPLOY.md)
 
 ### 3. ตัดสินใจวิธีกรอกยอดคงเหลือ (REQUIREMENTS §7)
 
