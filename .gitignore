@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Personal loan figures — never commit real financial data to a public repo
+*.private.*
+/private/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude Code local overrides
+CLAUDE.local.md
+.claude/settings.local.json
