@@ -41,8 +41,10 @@ docs/      requirement และการตัดสินใจเรื่อ
 
 ## เอกสาร
 
+- [docs/STATUS.md](docs/STATUS.md) — **ตอนนี้ถึงไหนแล้ว และอะไรค้างอยู่** (เริ่มที่นี่)
 - [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) — ขอบเขตและสิ่งที่ตั้งใจไม่ทำ
 - [docs/TECH-STACK.md](docs/TECH-STACK.md) — เครื่องมือที่ใช้และเหตุผล
+- [docs/DEPLOY.md](docs/DEPLOY.md) — วิธี deploy และจัดการโดเมน
 - [CLAUDE.md](CLAUDE.md) — แนวทางการทำงานร่วมกับ AI ในโปรเจกต์นี้
 
 ## ข้อจำกัดที่ควรรู้
