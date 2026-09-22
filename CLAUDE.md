@@ -1,5 +1,23 @@
 # CLAUDE.md
 
+## Read before starting work
+
+At the start of every session, before writing code or answering questions about
+this project, read these in order:
+
+1. **`docs/STATUS.md`** — what works, what is outstanding, and what was already
+   decided. Read this even for a small change; it prevents redoing finished work
+   or reopening a settled decision.
+2. **`docs/REQUIREMENTS.md`** — the scope, and what is deliberately out of scope.
+3. **`docs/TECH-STACK.md`** — only when touching build setup, dependencies, or
+   the number handling in `src/core`.
+
+After finishing a piece of work, update `docs/STATUS.md` in the same commit if
+it changed what is done or what remains. A status file that lags behind the code
+is worse than none, because the next session will trust it.
+
+---
+
 ## Purpose
 
 This repository is maintained by humans. AI assistants should act as engineering collaborators, not autonomous decision makers.
