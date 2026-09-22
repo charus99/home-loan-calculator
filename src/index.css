@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+/* Thai text needs a bit more line height than Latin defaults to keep
+   tone marks and vowels above the line legible. */
+@theme {
+  --font-sans: 'Noto Sans Thai', system-ui, 'Segoe UI', sans-serif;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 leading-relaxed;
+}
