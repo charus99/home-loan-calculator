@@ -4,7 +4,11 @@
 ที่ต้องตั้ง `npm run build` ได้ไฟล์ใน `dist/` ประมาณ 680 KB (190 KB หลัง gzip)
 เอาไปวางที่ไหนก็ได้ที่เสิร์ฟไฟล์ static
 
-ปัจจุบันใช้ **Cloudflare Pages** ต่อกับ GitHub repo โดยตรง
+ปัจจุบันใช้ **Cloudflare Workers** (static assets) ต่อกับ GitHub repo โดยตรง
+
+> Cloudflare รวม Pages เข้ากับ Workers แล้ว โปรเจกต์ที่สร้างใหม่จะเป็น Workers
+> ทั้งหมด คู่มือเก่าบนอินเทอร์เน็ตที่พูดถึง "Pages project" ยังใช้ได้โดยหลักการ
+> แต่ชื่อช่องและ deploy command ต่างกัน
 
 ---
 
@@ -14,32 +18,36 @@
 
 https://dash.cloudflare.com/sign-up — ฟรี ไม่ต้องใส่บัตรเครดิต
 
-### 2. สร้าง Pages project
+### 2. สร้าง Worker จาก repo
 
 จากหน้า dashboard:
 
-1. เมนูซ้าย → **Workers & Pages** → **Create** → แท็บ **Pages**
-2. **Connect to Git** → อนุญาตให้ Cloudflare เข้าถึง GitHub
+1. เมนูซ้าย → **Compute** → **Workers & Pages** → **Create**
+2. **Import a repository** → อนุญาตให้ Cloudflare เข้าถึง GitHub
 3. เลือก repo `charus99/home-loan-calculator`
 
 ### 3. ตั้งค่า build
 
+ที่ **Settings → Builds → Build configuration**
+
 | ช่อง | ค่าที่ใส่ |
 |---|---|
-| Framework preset | `Vite` |
 | Build command | `npm run build:ci` |
-| Build output directory | `dist` |
-| Root directory | (เว้นว่าง) |
-| Node version | `24` |
+| Deploy command | `npx wrangler deploy` |
+| Version command | `npx wrangler versions upload` |
+| Root directory | `/` |
+| Production branch | `main` |
 
 **ทำไมใช้ `build:ci` ไม่ใช่ `build`:** `build` รัน `tsc -b` ด้วย ซึ่งถ้า type error
 จะทำให้ deploy ล้มทั้งหมด การตรวจ type ทำใน GitHub Actions แล้ว
 (ดู `.github/workflows/ci.yml`) จึงไม่ต้องทำซ้ำตอน deploy
 
-### 4. กด Save and Deploy
+ส่วนที่เหลือ — ชื่อ Worker, assets directory, SPA routing — อ่านจาก
+`wrangler.toml` ใน repo ไม่ต้องตั้งในหน้าเว็บ
 
-รอประมาณ 1-2 นาที จะได้ URL หน้าตาแบบ
-`https://home-loan-calculator.pages.dev`
+### 4. รอ deploy
+
+จะได้ URL หน้าตาแบบ `https://home-loan-calculator.<subdomain>.workers.dev`
 
 ---
 
@@ -52,7 +60,7 @@ PR แต่ละอันจะได้ preview URL ของตัวเอ�
 
 ## ต่อโดเมนของตัวเอง
 
-ใน Pages project → **Custom domains** → **Set up a domain**
+ใน Worker → แท็บ **Domains** → **Add**
 
 - ถ้าโดเมนอยู่กับ Cloudflare อยู่แล้ว: กดเลือกได้เลย
 - ถ้าอยู่ที่อื่น: Cloudflare จะบอก CNAME ที่ต้องไปตั้งที่ผู้ให้บริการโดเมน
@@ -65,11 +73,28 @@ HTTPS ได้อัตโนมัติ ไม่ต้องตั้งค�
 
 | ไฟล์ | ทำอะไร |
 |---|---|
+| `wrangler.toml` | บอก Worker ว่าเสิร์ฟไฟล์จาก `dist/` และจัดการ SPA routing |
 | `public/_headers` | ตั้ง cache header ให้ asset cache ถาวร แต่ `index.html` ไม่ cache |
 | `.github/workflows/ci.yml` | ตรวจ typecheck, lint, test, build ทุก push |
 
 `public/_headers` สำคัญกว่าที่คิด: ถ้า `index.html` ถูก cache ผู้ใช้เดิมจะยังเห็น
 เวอร์ชันเก่าแม้ deploy ใหม่แล้ว เพราะมันชี้ไปหาไฟล์ asset ชื่อเดิมที่ไม่มีอยู่แล้ว
+Vite ก็อปทุกอย่างใน `public/` เข้า `dist/` ตอน build ไฟล์นี้จึงไปอยู่ที่ที่
+Worker อ่านเจอโดยอัตโนมัติ
+
+`not_found_handling = "single-page-application"` ใน `wrangler.toml` ทำให้ path
+ที่ไม่ตรงกับไฟล์ไหนคืน `index.html` แทน 404 — จำเป็นถ้าภายหลังเพิ่ม routing
+
+---
+
+## ทดสอบก่อน deploy
+
+```bash
+npm run build:ci        # สร้าง dist/
+npx wrangler deploy --dry-run   # ตรวจว่า config ถูกและไฟล์ครบ
+```
+
+`--dry-run` ไม่ส่งอะไรขึ้น Cloudflare แค่บอกว่าจะอัปโหลดอะไรบ้าง
 
 ---
 

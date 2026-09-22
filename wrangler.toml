@@ -1,0 +1,14 @@
+# Cloudflare Workers configuration.
+#
+# This project has no server code — the Worker exists only to serve the static
+# files Vite builds. Everything runs in the visitor's browser.
+
+name = "home-loan-calculator"
+compatibility_date = "2026-09-22"
+
+[assets]
+directory = "./dist"
+
+# A single-page app has one HTML entry point, so a request for any path that is
+# not a file must return index.html rather than a 404.
+not_found_handling = "single-page-application"
