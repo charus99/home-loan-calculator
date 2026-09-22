@@ -60,6 +60,51 @@ export interface ScheduleRow {
   balance: number
 }
 
+/**
+ * One-off costs paid to move a loan to another lender.
+ *
+ * Every field is in baht and optional, because which costs apply depends on the
+ * lender and on how far into the current contract the borrower is. Omitted
+ * fields count as zero rather than as unknown.
+ */
+export interface RefinanceCosts {
+  /** Mortgage registration at the Land Department, conventionally about 1% of the new facility. */
+  mortgageRegistration?: number
+  /** Lender's valuation of the property. */
+  appraisal?: number
+  /** Stamp duty on the loan agreement. */
+  stampDuty?: number
+  /** Fire insurance and/or mortgage reducing term assurance premiums. */
+  insurance?: number
+  /** Penalty the current lender charges for settling early, often within the first three years. */
+  prepaymentPenalty?: number
+  /** Anything else the borrower has been quoted. */
+  other?: number
+}
+
+/** The outcome of comparing a refinance against staying put. */
+export interface RefinanceComparison {
+  /** Schedule for the remainder of the existing loan. */
+  current: Schedule
+  /** Schedule for the replacement loan. */
+  alternative: Schedule
+  /** Total of every cost in RefinanceCosts. */
+  totalCosts: number
+  /** Interest saved before costs. Negative means the new loan costs more interest. */
+  grossInterestSaved: number
+  /** Interest saved after costs. This is the figure that answers "is it worth it". */
+  netSaving: number
+  /**
+   * Months until cumulative savings overtake the up-front costs, or null when
+   * that never happens within the compared term.
+   */
+  breakEvenMonth: number | null
+  /** Cumulative net position at each month, for plotting the break-even chart. */
+  cumulativeNet: number[]
+  /** Months cut from the payoff date. Negative means the new loan runs longer. */
+  monthsSaved: number
+}
+
 /** A complete amortization schedule plus its headline totals. */
 export interface Schedule {
   rows: ScheduleRow[]
