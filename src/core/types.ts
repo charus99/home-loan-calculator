@@ -24,7 +24,14 @@ export interface LoanTerms {
   principal: number
   /** Rate tiers, ordered by fromMonth ascending. The first must start at month 1. */
   rateTiers: RateTier[]
-  /** Total number of monthly payments. */
+  /**
+   * How many monthly payments the schedule may run for.
+   *
+   * With monthlyPayment set this acts as a ceiling rather than a target: the
+   * loan usually clears earlier, and monthsToPayoff reports when. A loan that
+   * has not cleared by this month is still cut off here, with the final row's
+   * balance left above zero.
+   */
   termMonths: number
   /**
    * Date the schedule starts from, used to count the real days in each month.

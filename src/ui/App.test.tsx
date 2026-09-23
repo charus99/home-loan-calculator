@@ -3,6 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 
+/** Reads a month count out of a rendered duration such as "22 ปี 6 เดือน". */
+function monthsFrom(text: string): number {
+  const years = Number(text.match(/(\d+)\s*ปี/)?.[1] ?? 0)
+  const months = Number(text.match(/(\d+)\s*เดือน/)?.[1] ?? 0)
+  return years * 12 + months
+}
+
 describe('App', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -68,6 +75,47 @@ describe('App', () => {
     render(<App />)
 
     expect(screen.getAllByLabelText(/เงินต้นคงเหลือ/)[0]).toHaveValue(1_500_000)
+  })
+
+  it('asks for the instalment on the current loan only', () => {
+    render(<App />)
+
+    // The alternative is compared at the same payment, so entering one there
+    // would invite the very comparison this avoids: a lower instalment on a
+    // longer term.
+    expect(screen.getAllByLabelText(/ค่างวดต่อเดือน/)).toHaveLength(1)
+  })
+
+  it('reports how long each loan takes to clear', () => {
+    render(<App />)
+
+    const payoffs = screen.getAllByText(/หมดหนี้ใน/)
+    expect(payoffs).toHaveLength(2)
+  })
+
+  it('clears the debt sooner on the cheaper loan at the same payment', () => {
+    render(<App />)
+
+    // Both columns pay the same instalment, so the cheaper rate must finish
+    // first — that shorter term is the whole benefit being measured.
+    const [currentPayoff, alternativePayoff] = screen
+      .getAllByText(/หมดหนี้ใน/)
+      .map((el) => el.textContent ?? '')
+
+    expect(monthsFrom(currentPayoff)).toBeGreaterThan(monthsFrom(alternativePayoff))
+    expect(screen.getByRole('heading', { name: 'คุ้มที่จะเปลี่ยน' })).toBeInTheDocument()
+  })
+
+
+  it('refuses to calculate without an instalment', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const paymentInput = screen.getByLabelText(/ค่างวดต่อเดือน/)
+    await user.clear(paymentInput)
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText(/ต้องกรอกค่างวดต่อเดือน/)).toBeInTheDocument()
   })
 
   it('states that the figures are not official', () => {

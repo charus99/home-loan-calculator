@@ -1,5 +1,5 @@
 import type { LoanTerms, RateTier } from '../core/types'
-import { formatRate } from './format'
+import { formatDuration, formatRate } from './format'
 
 interface LoanFormProps {
   title: string
@@ -7,15 +7,31 @@ interface LoanFormProps {
   onChange: (terms: LoanTerms) => void
   /** Rendered under the title, e.g. to explain what this column represents. */
   hint?: string
+  /**
+   * Whether this column asks for the instalment.
+   *
+   * The current loan does: the borrower reads it off their statement, while
+   * the months remaining is something they would have to work out. The
+   * alternative does not — it is compared at the same instalment, so a lower
+   * rate shows up as clearing the debt sooner rather than as a smaller
+   * payment on a longer term.
+   */
+  askForPayment: boolean
+  /** Months until payoff, computed from the inputs, shown back as feedback. */
+  monthsToPayoff?: number
 }
 
 /**
  * One column of the comparison: the inputs describing a single loan.
- *
- * Numbers are held as strings while typing so that clearing a field does not
- * snap it back to zero mid-edit.
  */
-export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
+export function LoanForm({
+  title,
+  terms,
+  onChange,
+  hint,
+  askForPayment,
+  monthsToPayoff,
+}: LoanFormProps) {
   const updateTier = (index: number, patch: Partial<RateTier>) => {
     const rateTiers = terms.rateTiers.map((tier, i) =>
       i === index ? { ...tier, ...patch } : tier,
@@ -53,15 +69,17 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
           onChange={(principal) => onChange({ ...terms, principal })}
         />
 
-        <NumberField
-          label="ระยะเวลาที่เหลือ"
-          suffix="เดือน"
-          value={terms.termMonths}
-          min={1}
-          step={12}
-          onChange={(termMonths) => onChange({ ...terms, termMonths })}
-          help={`${(terms.termMonths / 12).toFixed(1)} ปี`}
-        />
+        {askForPayment ? (
+          <NumberField
+            label="ค่างวดต่อเดือน"
+            suffix="บาท"
+            value={terms.monthlyPayment ?? 0}
+            min={1}
+            step={500}
+            onChange={(monthlyPayment) => onChange({ ...terms, monthlyPayment })}
+            help="ยอดที่ธนาคารเรียกเก็บ ดูได้จากใบแจ้งหนี้"
+          />
+        ) : null}
 
         <fieldset>
           <legend className="ink text-sm font-medium">
@@ -129,10 +147,22 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
           onChange={(extraMonthlyPayment) => onChange({ ...terms, extraMonthlyPayment })}
           help="ใส่ 0 ถ้าไม่โปะ"
         />
+
+        {!askForPayment ? (
+          <p className="ink-muted text-xs">
+            เทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน ดอกเบี้ยที่ถูกลงจะไปตัดเงินต้นมากขึ้น
+          </p>
+        ) : null}
       </div>
 
-      <p className="ink-muted mt-4 text-xs">
-        อัตราปัจจุบัน {formatRate(terms.rateTiers[0].annualRatePercent)}
+      <p className="ink hairline mt-4 border-t pt-3 text-sm">
+        {monthsToPayoff === undefined ? (
+          <span className="ink-muted">อัตราปัจจุบัน {formatRate(terms.rateTiers[0].annualRatePercent)}</span>
+        ) : (
+          <>
+            หมดหนี้ใน <strong className="ink-strong">{formatDuration(monthsToPayoff)}</strong>
+          </>
+        )}
       </p>
     </section>
   )
