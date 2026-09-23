@@ -23,6 +23,16 @@ export function formatBaht(amount: number): string {
   return bahtFormatter.format(amount)
 }
 
+/**
+ * Rounds to the satang, for amounts that go into an input the visitor edits.
+ *
+ * Only for values on their way to a form field — the calculation core keeps
+ * full precision so that rounding does not compound across hundreds of rows.
+ */
+export function roundToSatang(amount: number): number {
+  return Math.round(amount * 100) / 100
+}
+
 /** Formats an amount to the satang, for schedule rows that should reconcile. */
 export function formatBahtPrecise(amount: number): string {
   return preciseBahtFormatter.format(amount)

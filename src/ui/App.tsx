@@ -9,6 +9,7 @@ import { ComparisonSummary } from './ComparisonSummary'
 import { CostsForm } from './CostsForm'
 import { LoanForm } from './LoanForm'
 import { ScheduleTable } from './ScheduleTable'
+import { roundToSatang } from './format'
 import { ThemeProvider } from './ThemeContext'
 import { ThemeToggle } from './ThemeToggle'
 import { useStoredState } from './useStoredState'
@@ -79,10 +80,14 @@ function reviveLoanTerms(fallback: LoanTerms) {
     }
 
     if (fallback.monthlyPayment && !restored.monthlyPayment) {
-      restored.monthlyPayment = annuityPayment(
-        restored.principal,
-        restored.rateTiers[0].annualRatePercent,
-        restored.termMonths,
+      // Rounded to the satang, because this lands in an input the visitor
+      // reads and edits — the raw annuity figure runs to twelve decimals.
+      restored.monthlyPayment = roundToSatang(
+        annuityPayment(
+          restored.principal,
+          restored.rateTiers[0].annualRatePercent,
+          restored.termMonths,
+        ),
       )
       restored.termMonths = MAX_TERM_MONTHS
     }

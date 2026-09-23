@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { LoanTerms, RateTier } from '../core/types'
 import { formatDuration, formatRate } from './format'
 
@@ -64,8 +65,7 @@ export function LoanForm({
           label="เงินต้นคงเหลือ"
           suffix="บาท"
           value={terms.principal}
-          min={1}
-          step={10_000}
+          decimals={2}
           onChange={(principal) => onChange({ ...terms, principal })}
         />
 
@@ -74,8 +74,7 @@ export function LoanForm({
             label="ค่างวดต่อเดือน"
             suffix="บาท"
             value={terms.monthlyPayment ?? 0}
-            min={1}
-            step={500}
+            decimals={2}
             onChange={(monthlyPayment) => onChange({ ...terms, monthlyPayment })}
             help="ยอดที่ธนาคารเรียกเก็บ ดูได้จากใบแจ้งหนี้"
           />
@@ -102,17 +101,10 @@ export function LoanForm({
                     updateTier(index, { fromMonth: Number(event.target.value) })
                   }
                 />
-                <input
-                  type="number"
-                  aria-label={`ช่วงที่ ${index + 1} อัตราดอกเบี้ย`}
-                  className="field w-24 px-2 py-1 text-right"
+                <RateInput
+                  label={`ช่วงที่ ${index + 1} อัตราดอกเบี้ย`}
                   value={tier.annualRatePercent}
-                  min={0}
-                  max={100}
-                  step={0.05}
-                  onChange={(event) =>
-                    updateTier(index, { annualRatePercent: Number(event.target.value) })
-                  }
+                  onChange={(annualRatePercent) => updateTier(index, { annualRatePercent })}
                 />
                 <span className="ink text-sm">%</span>
                 {terms.rateTiers.length > 1 && index > 0 ? (
@@ -142,8 +134,7 @@ export function LoanForm({
           label="โปะเพิ่มต่อเดือน"
           suffix="บาท"
           value={terms.extraMonthlyPayment ?? 0}
-          min={0}
-          step={1_000}
+          decimals={2}
           onChange={(extraMonthlyPayment) => onChange({ ...terms, extraMonthlyPayment })}
           help="ใส่ 0 ถ้าไม่โปะ"
         />
@@ -168,39 +159,98 @@ export function LoanForm({
   )
 }
 
+/**
+ * The rate for one tier, to two decimal places.
+ *
+ * Thai lenders quote rates like 6.25% or MRR-2.13%, so a step attribute that
+ * snapped to 0.05 would reject figures taken straight off an offer sheet.
+ */
+function RateInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (value: number) => void
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      aria-label={label}
+      className="field w-24 px-2 py-1 text-right"
+      value={draft ?? String(value)}
+      onChange={(event) => {
+        const text = event.target.value
+        if (text !== '' && !/^\d*\.?\d{0,2}$/.test(text)) {
+          return
+        }
+        setDraft(text)
+        const parsed = Number(text)
+        if (text === '') {
+          onChange(0)
+        } else if (Number.isFinite(parsed) && parsed <= 100) {
+          onChange(parsed)
+        }
+      }}
+      onBlur={() => setDraft(null)}
+    />
+  )
+}
+
 interface NumberFieldProps {
   label: string
   value: number
   onChange: (value: number) => void
   suffix?: string
   help?: string
-  min?: number
-  max?: number
-  step?: number
+  /** Decimal places accepted. Omitted means whole numbers only. */
+  decimals?: number
 }
 
-function NumberField({
-  label,
-  value,
-  onChange,
-  suffix,
-  help,
-  min,
-  max,
-  step,
-}: NumberFieldProps) {
+function NumberField({ label, value, onChange, suffix, help, decimals = 0 }: NumberFieldProps) {
+  // Held as text while the field has focus. A controlled number would rewrite
+  // "17110." back to "17110" as soon as the decimal point is typed, making a
+  // fractional amount impossible to enter; it would also expand a value the
+  // migration computed to its full twelve decimals.
+  const [draft, setDraft] = useState<string | null>(null)
+
+  const accepts = (text: string) => {
+    if (text === '') {
+      return true
+    }
+    const pattern = decimals > 0 ? new RegExp(`^\\d*\\.?\\d{0,${decimals}}$`) : /^\d*$/
+    return pattern.test(text)
+  }
+
   return (
     <label className="block">
       <span className="ink text-sm font-medium">{label}</span>
       <span className="mt-1 flex items-center gap-2">
         <input
-          type="number"
+          type="text"
+          inputMode="decimal"
           className="field w-full px-3 py-2 text-right"
-          value={value}
-          min={min}
-          max={max}
-          step={step}
-          onChange={(event) => onChange(Number(event.target.value))}
+          value={draft ?? String(value)}
+          onChange={(event) => {
+            const text = event.target.value
+            if (!accepts(text)) {
+              return
+            }
+            setDraft(text)
+            // An empty or partial entry ("17110.") is not a number yet; the
+            // previous value stands until it becomes one.
+            const parsed = Number(text)
+            if (text !== '' && Number.isFinite(parsed)) {
+              onChange(parsed)
+            } else if (text === '') {
+              onChange(0)
+            }
+          }}
+          onBlur={() => setDraft(null)}
         />
         {suffix ? <span className="ink shrink-0 text-sm">{suffix}</span> : null}
       </span>

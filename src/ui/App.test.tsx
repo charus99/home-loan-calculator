@@ -74,7 +74,7 @@ describe('App', () => {
     unmount()
     render(<App />)
 
-    expect(screen.getAllByLabelText(/เงินต้นคงเหลือ/)[0]).toHaveValue(1_500_000)
+    expect(screen.getAllByLabelText(/เงินต้นคงเหลือ/)[0]).toHaveValue('1500000')
   })
 
   it('asks for the instalment on the current loan only', () => {
