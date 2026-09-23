@@ -8,7 +8,7 @@
 
 ## ใช้งานได้แล้ว
 
-- **เว็บ:** https://home-loan-calculator.rusgunner.workers.dev
+- **เว็บ:** https://loan.charus.xyz (และ https://home-loan-calculator.rusgunner.workers.dev)
 - **repo:** https://github.com/charus99/home-loan-calculator (public)
 - 87 tests ผ่าน · build และ lint สะอาด · ตรวจบนเบราว์เซอร์จริงแล้ว ไม่มี console error
 
@@ -24,6 +24,8 @@
 | กราฟ 4 แบบ (Recharts) | ✅ |
 | เก็บข้อมูลใน localStorage | ✅ |
 | Deploy อัตโนมัติเมื่อ push | ✅ |
+| โดเมน loan.charus.xyz | ✅ |
+| Dark mode (ตามค่าระบบ) | ✅ |
 
 ---
 
@@ -33,7 +35,7 @@
 
 **สำคัญที่สุด และ AI ทำเองไม่ได้** — ต้องใช้เอกสารจริงจากธนาคาร
 
-test ที่ผ่านทั้ง 87 ตัวพิสูจน์แค่ว่าโค้ดตรงกับสูตรที่เราเขียน ไม่ได้พิสูจน์ว่า
+test ที่ผ่านทั้ง 96 ตัวพิสูจน์แค่ว่าโค้ดตรงกับสูตรที่เราเขียน ไม่ได้พิสูจน์ว่า
 สูตรตรงกับที่ธนาคารคิดจริง ค่างวดที่ได้อยู่ในช่วงเดียวกับเครื่องคำนวณทั่วไป
 แต่ยังไม่มีการยืนยันกับใบแจ้งหนี้หรือตารางผ่อนจริงแม้แต่ชุดเดียว
 
@@ -41,35 +43,7 @@ test ที่ผ่านทั้ง 87 ตัวพิสูจน์แค�
 ยอดคงเหลือสัก 3-5 งวด ถ้าคลาดเคลื่อนเกินหลักสิบบาทแปลว่าสมมติฐานใน
 [REQUIREMENTS §2.4](REQUIREMENTS.md) ข้อใดข้อหนึ่งผิด
 
-### 2. ผูก loan.charus.xyz กับ Worker
-
-**DNS พร้อมแล้ว** (ยืนยัน 2026-09-23): `charus.xyz` ตอบ NS เป็น
-`cullen.ns.cloudflare.com` และ `grace.ns.cloudflare.com` ส่วน SOA เป็น `cullen`
-โดเมนชี้มา Cloudflare เรียบร้อย
-
-เหลือขั้นเดียว ทำในหน้าเว็บ Cloudflare:
-
-Worker `home-loan-calculator` → แท็บ **Domains** → **Add** → `loan.charus.xyz`
-
-SSL ออกให้อัตโนมัติ ขั้นตอนเต็มและวิธีเพิ่ม subdomain ของแอปอื่นอยู่ใน
-[DEPLOY.md](DEPLOY.md)
-
-**ข้อควรรู้เรื่องการตรวจ DNS จากเครื่องนี้:** เครือข่ายที่ใช้อยู่บล็อกการถาม
-DNS server ภายนอกโดยตรง คำสั่งที่ระบุ `-Server 8.8.8.8` จะ timeout ทั้งหมด
-รวมถึงโดเมนที่ปกติดีอย่าง google.com ให้ใช้ DNS ของระบบแทน:
-
-```powershell
-Resolve-DnsName charus.xyz -Type NS
-```
-
-ถ้าเจอ timeout ให้ทดสอบกับ `google.com` ก่อนจะสรุปว่าโดเมนมีปัญหา
-
-### 3. Dark mode
-
-ยังไม่มี สีกราฟใน `chartTheme.ts` มีชุดสำหรับ dark surface ที่ผ่าน validator แล้ว
-แต่ยังไม่ได้ใช้
-
-### 4. Bundle ใหญ่ 650 KB (190 KB gzip)
+### 2. Bundle ใหญ่ 650 KB (190 KB gzip)
 
 Recharts กินพื้นที่เกือบทั้งหมด ยังไม่กระทบการใช้งานจริง
 ถ้าจะแก้: code splitting หรือเปลี่ยนไปใช้ไลบรารีที่เล็กกว่า
@@ -104,3 +78,13 @@ Recharts กินพื้นที่เกือบทั้งหมด ย�
 
 **สีกราฟต้องรันเครื่องมือตรวจ ไม่ใช่เลือกด้วยตา** — สีฟ้าอ่อนที่ดูดีตอนแรก
 fail ทั้ง lightness band และ chroma floor
+
+**ห้ามแก้ไฟล์ที่มีภาษาไทยด้วย shell script** — `Get-Content -Raw` บน
+PowerShell 5.1 อ่านเป็น ANSI พอเขียนกลับเป็น UTF-8 ตัวอักษรไทยเสียหมด
+(`เงินต้น` → `à¹€à¸‡à¸´à¸™`) เคยเกิดกับ `LoanForm.tsx` กู้ด้วย `git checkout`
+ใช้ Edit tool แก้ทีละจุดแทน ช้ากว่าแต่ไม่ทำลายไฟล์
+
+**เครือข่ายนี้บล็อกการถาม DNS server ภายนอก** — คำสั่งที่ระบุ `-Server 8.8.8.8`
+timeout ทั้งหมด รวมถึงโดเมนที่ปกติดีอย่าง google.com ใช้ DNS ของระบบแทน
+(`Resolve-DnsName charus.xyz -Type NS`) และถ้าเจอ timeout ให้ทดสอบกับ
+`google.com` ก่อนจะสรุปว่าโดเมนมีปัญหา
