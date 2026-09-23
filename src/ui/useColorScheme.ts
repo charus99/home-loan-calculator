@@ -1,40 +1,76 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 export type ColorScheme = 'light' | 'dark'
 
+/** What the viewer chose. 'system' defers to the operating system setting. */
+export type ThemePreference = 'system' | ColorScheme
+
 const QUERY = '(prefers-color-scheme: dark)'
+const STORAGE_KEY = 'home-loan:theme'
 
 /**
- * The colour scheme the page is currently rendered in.
+ * The colour scheme in effect, and the control to change it.
  *
- * Tailwind handles light and dark styling through CSS, but Recharts takes its
- * colours as props, so the chart components need the scheme as a value. This
- * follows the operating system setting and updates when the viewer changes it
- * without reloading.
+ * Tailwind styles the page through CSS, but Recharts takes its colours as
+ * props, so the charts need the resolved scheme as a value. Both read the same
+ * source of truth: the preference is written to a data-theme attribute on
+ * <html>, which the stylesheet keys off, and returned here for the charts.
  */
-export function useColorScheme(): ColorScheme {
-  const [scheme, setScheme] = useState<ColorScheme>(() => readScheme())
+export function useThemePreference() {
+  const [preference, setPreferenceState] = useState<ThemePreference>(() => readStored())
+  const [systemScheme, setSystemScheme] = useState<ColorScheme>(() => readSystem())
 
+  // Follow the system setting even while an explicit choice is active, so
+  // switching back to 'system' takes effect without a reload.
   useEffect(() => {
-    // matchMedia is missing in some test environments and in older browsers;
-    // the initial value already fell back to light, so there is nothing to
-    // subscribe to.
     if (typeof window.matchMedia !== 'function') {
       return
     }
 
     const media = window.matchMedia(QUERY)
-    const update = () => setScheme(media.matches ? 'dark' : 'light')
+    const update = () => setSystemScheme(media.matches ? 'dark' : 'light')
 
     update()
     media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
   }, [])
 
-  return scheme
+  const scheme: ColorScheme = preference === 'system' ? systemScheme : preference
+
+  // The stylesheet's dark variant keys off this attribute, so it carries the
+  // resolved scheme rather than the raw preference: writing 'system' here
+  // would leave the page with no theme at all.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', scheme)
+  }, [scheme])
+
+  const setPreference = useCallback((next: ThemePreference) => {
+    setPreferenceState(next)
+    try {
+      if (next === 'system') {
+        localStorage.removeItem(STORAGE_KEY)
+      } else {
+        localStorage.setItem(STORAGE_KEY, next)
+      }
+    } catch {
+      // Storage is unavailable in private windows and when site data is
+      // blocked. The choice still applies for this session.
+    }
+  }, [])
+
+  return { preference, scheme, setPreference }
 }
 
-function readScheme(): ColorScheme {
+function readStored(): ThemePreference {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    return stored === 'light' || stored === 'dark' ? stored : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+function readSystem(): ColorScheme {
   try {
     return window.matchMedia(QUERY).matches ? 'dark' : 'light'
   } catch {

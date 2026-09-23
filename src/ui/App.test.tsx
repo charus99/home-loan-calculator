@@ -74,4 +74,27 @@ describe('App', () => {
     render(<App />)
     expect(screen.getByText(/ยังไม่ได้เทียบกับตารางผ่อนจริงของธนาคาร/)).toBeInTheDocument()
   })
+
+  it('switches the page theme as soon as the toggle is used', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('radio', { name: /มืด/ }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+
+    await user.click(screen.getByRole('radio', { name: /สว่าง/ }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+  })
+
+  it('keeps the choice after remounting', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<App />)
+
+    await user.click(screen.getByRole('radio', { name: /มืด/ }))
+    unmount()
+
+    render(<App />)
+    expect(screen.getByRole('radio', { name: /มืด/ })).toBeChecked()
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+  })
 })

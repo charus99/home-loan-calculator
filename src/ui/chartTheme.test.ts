@@ -39,7 +39,19 @@ describe('chartTheme', () => {
     }
   })
 
-  it('treats an unknown scheme as light rather than failing', () => {
+  it('returns a different palette per scheme, so a lag would be visible', () => {
+    // The charts read the scheme from one provider rather than resolving it
+    // each. If that ever regresses, these differing values are what makes the
+    // mismatch show up on screen.
+    const light = chartTheme('light')
+    const dark = chartTheme('dark')
+
+    expect(dark.loan.current).not.toBe(light.loan.current)
+    expect(dark.loan.alternative).not.toBe(light.loan.alternative)
+    expect(dark.chrome.gridline).not.toBe(light.chrome.gridline)
+  })
+
+  it('returns a stable object for the same scheme', () => {
     expect(chartTheme('light')).toBe(chartTheme('light'))
   })
 })

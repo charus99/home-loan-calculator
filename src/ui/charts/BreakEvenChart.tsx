@@ -9,7 +9,7 @@ import {
 } from 'recharts'
 import type { RefinanceComparison } from '../../core/types'
 import { chartTheme } from '../chartTheme'
-import { useColorScheme } from '../useColorScheme'
+import { useTheme } from '../ThemeContext'
 import { buildYearTicks, formatYearTick } from './axis'
 import { ChartFrame } from './BalanceChart'
 import { formatMonthLabel, formatTooltipBaht } from './tooltipFormatters'
@@ -26,7 +26,7 @@ interface BreakEvenChartProps {
  * refinance and move before that month and the switch has cost money.
  */
 export function BreakEvenChart({ comparison }: BreakEvenChartProps) {
-  const theme = chartTheme(useColorScheme())
+  const theme = chartTheme(useTheme())
   const { cumulativeNet, breakEvenMonth } = comparison
 
   const data = cumulativeNet.map((net, index) => ({ month: index + 1, net }))

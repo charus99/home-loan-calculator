@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Schedule } from '../../core/types'
 import { chartTheme } from '../chartTheme'
-import { useColorScheme } from '../useColorScheme'
+import { useTheme } from '../ThemeContext'
 import { ChartFrame } from './BalanceChart'
 import { formatTooltipBaht, formatYearLabel } from './tooltipFormatters'
 
@@ -20,7 +20,7 @@ interface PaymentSplitChartProps {
  * and say less than 30 readable ones.
  */
 export function PaymentSplitChart({ schedule, title }: PaymentSplitChartProps) {
-  const theme = chartTheme(useColorScheme())
+  const theme = chartTheme(useTheme())
 
   // One bar per year is still 22 bars on a half-width chart, which crowds the
   // labels. Sampling every other year keeps the shape of the shift readable.

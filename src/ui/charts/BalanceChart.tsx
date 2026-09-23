@@ -10,7 +10,7 @@ import {
 } from 'recharts'
 import type { Schedule } from '../../core/types'
 import { chartTheme } from '../chartTheme'
-import { useColorScheme } from '../useColorScheme'
+import { useTheme } from '../ThemeContext'
 import { buildYearTicks, formatYearTick } from './axis'
 import { formatMonthLabel, formatTooltipBaht } from './tooltipFormatters'
 
@@ -26,7 +26,7 @@ interface BalanceChartProps {
  * zero is the payoff date, and the gap between them is what refinancing buys.
  */
 export function BalanceChart({ current, alternative }: BalanceChartProps) {
-  const theme = chartTheme(useColorScheme())
+  const theme = chartTheme(useTheme())
   const horizon = Math.max(current.rows.length, alternative.rows.length)
 
   const data = Array.from({ length: horizon }, (_, index) => ({

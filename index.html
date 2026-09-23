@@ -1,10 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vite-scaffold</title>
+    <title>คำนวณสินเชื่อบ้าน</title>
+    <meta
+      name="description"
+      content="เปรียบเทียบสินเชื่อบ้านและข้อเสนอรีไฟแนนซ์ ดอกเบี้ยลดต้นรายวันแบบธนาคารไทย"
+    />
+    <script>
+      // Applied before first paint so the page never renders in the wrong
+      // theme and then corrects itself. useThemePreference reads the same key
+      // and takes over from here.
+      try {
+        var stored = localStorage.getItem('home-loan:theme')
+        var dark =
+          stored === 'dark' ||
+          (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light')
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

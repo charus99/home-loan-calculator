@@ -9,7 +9,10 @@ import { ComparisonSummary } from './ComparisonSummary'
 import { CostsForm } from './CostsForm'
 import { LoanForm } from './LoanForm'
 import { ScheduleTable } from './ScheduleTable'
+import { ThemeProvider } from './ThemeContext'
+import { ThemeToggle } from './ThemeToggle'
 import { useStoredState } from './useStoredState'
+import { useThemePreference } from './useColorScheme'
 
 /** Someone part way through a loan at the post-promotional rate. */
 const DEFAULT_CURRENT: LoanTerms = {
@@ -60,6 +63,8 @@ function reviveLoanTerms(fallback: LoanTerms) {
 }
 
 export default function App() {
+  const { preference, scheme, setPreference } = useThemePreference()
+
   const [currentLoan, setCurrentLoan] = useStoredState(
     'home-loan:current',
     DEFAULT_CURRENT,
@@ -94,13 +99,17 @@ export default function App() {
   }, [currentLoan, alternativeLoan, costs, problems])
 
   return (
+    <ThemeProvider value={scheme}>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <main className="mx-auto max-w-5xl px-4 py-10">
-        <header>
-          <h1 className="ink-strong text-3xl font-bold">คำนวณสินเชื่อบ้าน</h1>
-          <p className="ink mt-2">
-            เปรียบเทียบสินเชื่อปัจจุบันกับทางเลือกใหม่ ดอกเบี้ยลดต้นรายวันแบบธนาคารไทย
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="ink-strong text-3xl font-bold">คำนวณสินเชื่อบ้าน</h1>
+            <p className="ink mt-2">
+              เปรียบเทียบสินเชื่อปัจจุบันกับทางเลือกใหม่ ดอกเบี้ยลดต้นรายวันแบบธนาคารไทย
+            </p>
+          </div>
+          <ThemeToggle preference={preference} onChange={setPreference} />
         </header>
 
         <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -187,5 +196,6 @@ export default function App() {
         </footer>
       </main>
     </div>
+    </ThemeProvider>
   )
 }
