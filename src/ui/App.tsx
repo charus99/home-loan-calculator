@@ -111,11 +111,15 @@ export default function App() {
   )
   const [costs, setCosts] = useStoredState('home-loan:costs', DEFAULT_COSTS)
 
-  // The alternative is judged at the same instalment as the current loan, so a
-  // lower rate shows up as clearing the debt sooner rather than as a smaller
-  // payment stretched over a longer term.
-  const alternativeAtSamePayment = useMemo(
-    () => ({ ...alternativeLoan, monthlyPayment: currentLoan.monthlyPayment }),
+  // With no instalment of its own, the alternative is judged at the current
+  // loan's payment, so a lower rate shows up as clearing the debt sooner
+  // rather than as a smaller payment stretched over a longer term. A lender's
+  // quoted instalment, once entered, takes precedence.
+  const alternativeToCompare = useMemo(
+    () => ({
+      ...alternativeLoan,
+      monthlyPayment: alternativeLoan.monthlyPayment ?? currentLoan.monthlyPayment,
+    }),
     [alternativeLoan, currentLoan.monthlyPayment],
   )
 
@@ -139,13 +143,13 @@ export default function App() {
       return null
     }
     try {
-      return compareRefinance(currentLoan, alternativeAtSamePayment, costs)
+      return compareRefinance(currentLoan, alternativeToCompare, costs)
     } catch (error) {
       // A schedule can refuse to build on inputs the tier check does not cover,
       // such as a zero principal. Surfacing it beats rendering a blank page.
       return error instanceof Error ? error : new Error('คำนวณไม่สำเร็จ')
     }
-  }, [currentLoan, alternativeAtSamePayment, costs, problems])
+  }, [currentLoan, alternativeToCompare, costs, problems])
 
   return (
     <ThemeProvider value={scheme}>
@@ -167,7 +171,7 @@ export default function App() {
             hint="กรอกยอดคงเหลือ ค่างวด และอัตราที่จ่ายอยู่ตอนนี้"
             terms={currentLoan}
             onChange={setCurrentLoan}
-            askForPayment
+            paymentField="required"
             monthsToPayoff={
               comparison instanceof Error ? undefined : comparison?.current.monthsToPayoff
             }
@@ -177,7 +181,8 @@ export default function App() {
             hint="ข้อเสนอรีไฟแนนซ์ หรือของธนาคารอีกเจ้า"
             terms={alternativeLoan}
             onChange={setAlternativeLoan}
-            askForPayment={false}
+            paymentField="optional"
+            inheritedPayment={currentLoan.monthlyPayment}
             monthsToPayoff={
               comparison instanceof Error ? undefined : comparison?.alternative.monthsToPayoff
             }

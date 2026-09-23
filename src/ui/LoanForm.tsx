@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { LoanTerms, RateTier } from '../core/types'
-import { formatDuration, formatRate } from './format'
+import { formatBaht, formatDuration, formatRate } from './format'
 
 interface LoanFormProps {
   title: string
@@ -9,15 +9,17 @@ interface LoanFormProps {
   /** Rendered under the title, e.g. to explain what this column represents. */
   hint?: string
   /**
-   * Whether this column asks for the instalment.
+   * How the instalment field behaves in this column.
    *
-   * The current loan does: the borrower reads it off their statement, while
-   * the months remaining is something they would have to work out. The
-   * alternative does not — it is compared at the same instalment, so a lower
-   * rate shows up as clearing the debt sooner rather than as a smaller
-   * payment on a longer term.
+   * 'required' is the current loan: the borrower reads the figure off their
+   * statement. 'optional' is an alternative offer, where leaving it blank
+   * compares at the current loan's instalment — which keeps a lower rate
+   * showing up as a shorter term rather than as a smaller payment. A lender's
+   * quoted instalment can be entered instead.
    */
-  askForPayment: boolean
+  paymentField: 'required' | 'optional'
+  /** The instalment used when this column's own field is blank. */
+  inheritedPayment?: number
   /** Months until payoff, computed from the inputs, shown back as feedback. */
   monthsToPayoff?: number
 }
@@ -30,7 +32,8 @@ export function LoanForm({
   terms,
   onChange,
   hint,
-  askForPayment,
+  paymentField,
+  inheritedPayment,
   monthsToPayoff,
 }: LoanFormProps) {
   const updateTier = (index: number, patch: Partial<RateTier>) => {
@@ -69,16 +72,31 @@ export function LoanForm({
           onChange={(principal) => onChange({ ...terms, principal })}
         />
 
-        {askForPayment ? (
-          <NumberField
-            label="ค่างวดต่อเดือน"
-            suffix="บาท"
-            value={terms.monthlyPayment ?? 0}
-            decimals={2}
-            onChange={(monthlyPayment) => onChange({ ...terms, monthlyPayment })}
-            help="ยอดที่ธนาคารเรียกเก็บ ดูได้จากใบแจ้งหนี้"
-          />
-        ) : null}
+        <NumberField
+          label="ค่างวดต่อเดือน"
+          suffix="บาท"
+          // An optional field shows empty rather than 0 when unset, so it reads
+          // as "not entered" rather than as a payment of nothing.
+          value={terms.monthlyPayment ?? (paymentField === 'optional' ? null : 0)}
+          decimals={2}
+          onChange={(monthlyPayment) =>
+            onChange({
+              ...terms,
+              // Zero means "not entered" for an optional field, so the column
+              // falls back to the inherited instalment rather than refusing
+              // to calculate.
+              monthlyPayment:
+                paymentField === 'optional' && monthlyPayment === 0 ? undefined : monthlyPayment,
+            })
+          }
+          help={
+            paymentField === 'required'
+              ? 'ยอดที่ธนาคารเรียกเก็บ ดูได้จากใบแจ้งหนี้'
+              : inheritedPayment
+                ? `เว้นว่างไว้เพื่อเทียบที่ค่างวดเดิม ${formatBaht(inheritedPayment)}`
+                : 'เว้นว่างไว้เพื่อเทียบที่ค่างวดเดิม'
+          }
+        />
 
         <fieldset>
           <legend className="ink text-sm font-medium">
@@ -139,9 +157,10 @@ export function LoanForm({
           help="ใส่ 0 ถ้าไม่โปะ"
         />
 
-        {!askForPayment ? (
+        {paymentField === 'optional' && !terms.monthlyPayment ? (
           <p className="ink-muted text-xs">
-            เทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน ดอกเบี้ยที่ถูกลงจะไปตัดเงินต้นมากขึ้น
+            กำลังเทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน ดอกเบี้ยที่ถูกลงจะไปตัดเงินต้นมากขึ้น
+            จึงหมดหนี้เร็วกว่า
           </p>
         ) : null}
       </div>
@@ -203,7 +222,8 @@ function RateInput({
 
 interface NumberFieldProps {
   label: string
-  value: number
+  /** null renders an empty field, for an optional amount that is not set. */
+  value: number | null
   onChange: (value: number) => void
   suffix?: string
   help?: string
@@ -234,7 +254,7 @@ function NumberField({ label, value, onChange, suffix, help, decimals = 0 }: Num
           type="text"
           inputMode="decimal"
           className="field w-full px-3 py-2 text-right"
-          value={draft ?? String(value)}
+          value={draft ?? (value === null ? '' : String(value))}
           onChange={(event) => {
             const text = event.target.value
             if (!accepts(text)) {

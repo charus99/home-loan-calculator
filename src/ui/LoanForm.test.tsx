@@ -19,7 +19,7 @@ function renderForm(overrides: Partial<LoanTerms> = {}) {
       title="สินเชื่อปัจจุบัน"
       terms={{ ...TERMS, ...overrides }}
       onChange={onChange}
-      askForPayment
+      paymentField="required"
     />,
   )
   return { onChange }
@@ -90,6 +90,46 @@ describe('LoanForm amount fields', () => {
     await user.type(field, 'abc')
 
     expect(field).toHaveValue('')
+  })
+})
+
+describe('LoanForm optional instalment', () => {
+  function renderOptional(monthlyPayment?: number) {
+    const onChange = vi.fn()
+    render(
+      <LoanForm
+        title="ทางเลือกใหม่"
+        terms={{ ...TERMS, monthlyPayment }}
+        onChange={onChange}
+        paymentField="optional"
+        inheritedPayment={17_100}
+      />,
+    )
+    return { onChange }
+  }
+
+  it('says which instalment it is comparing at when left blank', () => {
+    renderOptional(undefined)
+    expect(screen.getByText(/เว้นว่างไว้เพื่อเทียบที่ค่างวดเดิม/)).toBeInTheDocument()
+    expect(screen.getByText(/กำลังเทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน/)).toBeInTheDocument()
+  })
+
+  it('drops back to inheriting when the field is emptied', async () => {
+    const user = userEvent.setup()
+    const { onChange } = renderOptional(15_000)
+
+    await user.clear(screen.getByLabelText(/ค่างวดต่อเดือน/))
+
+    // undefined rather than 0, so the comparison inherits instead of refusing
+    // to calculate.
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ monthlyPayment: undefined }),
+    )
+  })
+
+  it("stops explaining the inheritance once a lender's figure is entered", () => {
+    renderOptional(15_000)
+    expect(screen.queryByText(/กำลังเทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน/)).toBeNull()
   })
 })
 

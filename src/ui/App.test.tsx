@@ -77,13 +77,37 @@ describe('App', () => {
     expect(screen.getAllByLabelText(/เงินต้นคงเหลือ/)[0]).toHaveValue('1500000')
   })
 
-  it('asks for the instalment on the current loan only', () => {
+  it('offers an instalment field in both columns', () => {
+    render(<App />)
+    expect(screen.getAllByLabelText(/ค่างวดต่อเดือน/)).toHaveLength(2)
+  })
+
+  it("compares at the current instalment until the alternative's own is given", async () => {
+    const user = userEvent.setup()
     render(<App />)
 
-    // The alternative is compared at the same payment, so entering one there
-    // would invite the very comparison this avoids: a lower instalment on a
-    // longer term.
-    expect(screen.getAllByLabelText(/ค่างวดต่อเดือน/)).toHaveLength(1)
+    expect(screen.getByText(/กำลังเทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน/)).toBeInTheDocument()
+
+    const [, alternativePayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
+    await user.clear(alternativePayment)
+    await user.type(alternativePayment, '14000')
+
+    // A quoted instalment takes over, and the inheritance note goes away.
+    expect(screen.queryByText(/กำลังเทียบด้วยค่างวดเท่ากับสินเชื่อปัจจุบัน/)).toBeNull()
+  })
+
+  it("lengthens the alternative's term when its instalment is lower", async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const before = monthsFrom(screen.getAllByText(/หมดหนี้ใน/)[1].textContent ?? '')
+
+    const [, alternativePayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
+    await user.clear(alternativePayment)
+    await user.type(alternativePayment, '14000')
+
+    const after = monthsFrom(screen.getAllByText(/หมดหนี้ใน/)[1].textContent ?? '')
+    expect(after).toBeGreaterThan(before)
   })
 
   it('reports how long each loan takes to clear', () => {
@@ -111,8 +135,9 @@ describe('App', () => {
     const user = userEvent.setup()
     render(<App />)
 
-    const paymentInput = screen.getByLabelText(/ค่างวดต่อเดือน/)
-    await user.clear(paymentInput)
+    // The current loan's field, which is the required one.
+    const [currentPayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
+    await user.clear(currentPayment)
 
     const alert = await screen.findByRole('alert')
     expect(within(alert).getByText(/ต้องกรอกค่างวดต่อเดือน/)).toBeInTheDocument()
