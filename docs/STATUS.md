@@ -41,32 +41,28 @@ test ที่ผ่านทั้ง 87 ตัวพิสูจน์แค�
 ยอดคงเหลือสัก 3-5 งวด ถ้าคลาดเคลื่อนเกินหลักสิบบาทแปลว่าสมมติฐานใน
 [REQUIREMENTS §2.4](REQUIREMENTS.md) ข้อใดข้อหนึ่งผิด
 
-### 2. รอ DNS cache ของ charus.xyz หมดอายุ
+### 2. ผูก loan.charus.xyz กับ Worker
 
-**การตั้งค่าเสร็จครบแล้วทุกขั้น** เหลือแค่รอ ไม่ต้องแก้อะไรเพิ่ม
+**DNS พร้อมแล้ว** (ยืนยัน 2026-09-23): `charus.xyz` ตอบ NS เป็น
+`cullen.ns.cloudflare.com` และ `grace.ns.cloudflare.com` ส่วน SOA เป็น `cullen`
+โดเมนชี้มา Cloudflare เรียบร้อย
 
-ตรวจสอบเมื่อ 2026-09-22:
+เหลือขั้นเดียว ทำในหน้าเว็บ Cloudflare:
 
-| จุดตรวจ | สถานะ |
-|---|---|
-| WHOIS ที่ registry | ✅ nameserver เป็น `cullen.ns.cloudflare.com`, `grace.ns.cloudflare.com` |
-| Cloudflare รับ zone | ✅ ถาม NS ตรงๆ ได้ SOA กลับมา |
-| Cloudflare ขึ้น Active | ⏳ กด "Check nameservers now" แล้ว ตอบว่ารอไม่กี่ชั่วโมง |
-| resolver สาธารณะ (8.8.8.8, 1.1.1.1, 9.9.9.9) | ⏳ ยังตอบ `*.ns.porkbun.com` จาก cache เก่า |
+Worker `home-loan-calculator` → แท็บ **Domains** → **Add** → `loan.charus.xyz`
 
-คำสั่งตรวจ:
+SSL ออกให้อัตโนมัติ ขั้นตอนเต็มและวิธีเพิ่ม subdomain ของแอปอื่นอยู่ใน
+[DEPLOY.md](DEPLOY.md)
+
+**ข้อควรรู้เรื่องการตรวจ DNS จากเครื่องนี้:** เครือข่ายที่ใช้อยู่บล็อกการถาม
+DNS server ภายนอกโดยตรง คำสั่งที่ระบุ `-Server 8.8.8.8` จะ timeout ทั้งหมด
+รวมถึงโดเมนที่ปกติดีอย่าง google.com ให้ใช้ DNS ของระบบแทน:
 
 ```powershell
-Resolve-DnsName charus.xyz -Type NS -Server 8.8.8.8
+Resolve-DnsName charus.xyz -Type NS
 ```
 
-เห็น `*.ns.cloudflare.com` เมื่อไหร่แปลว่าพร้อม
-
-**อย่าแก้ nameserver ซ้ำหรือลบโดเมนออกจาก Cloudflare แล้วเพิ่มใหม่** — WHOIS
-ยืนยันแล้วว่าตั้งถูก การแก้ซ้ำจะรีเซ็ตเวลารอและทำให้ช้าลงเท่านั้น
-
-พอ Cloudflare ขึ้น Active: Worker → แท็บ **Domains** → **Add** → `loan.charus.xyz`
-ขั้นตอนเต็มอยู่ใน [DEPLOY.md](DEPLOY.md)
+ถ้าเจอ timeout ให้ทดสอบกับ `google.com` ก่อนจะสรุปว่าโดเมนมีปัญหา
 
 ### 3. ตัดสินใจวิธีกรอกยอดคงเหลือ (REQUIREMENTS §7)
 
