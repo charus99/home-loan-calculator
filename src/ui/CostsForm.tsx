@@ -37,19 +37,19 @@ export function CostsForm({ costs, onChange, loanAmount }: CostsFormProps) {
   const suggestedRegistration = estimateMortgageRegistration(loanAmount)
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="text-lg font-semibold text-slate-900">ค่าใช้จ่ายในการรีไฟแนนซ์</h2>
-      <p className="mt-1 text-sm text-slate-500">
+    <section className="panel p-5">
+      <h2 className="ink-strong text-lg font-semibold">ค่าใช้จ่ายในการรีไฟแนนซ์</h2>
+      <p className="ink-muted mt-1 text-sm">
         ค่าใช้จ่ายเหล่านี้ถูกหักออกจากดอกเบี้ยที่ประหยัดได้ ก่อนสรุปว่าคุ้มหรือไม่
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {FIELDS.map(({ key, label, help }) => (
           <label key={key} className="block">
-            <span className="text-sm font-medium text-slate-700">{label}</span>
+            <span className="ink text-sm font-medium">{label}</span>
             <input
               type="number"
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-right"
+              className="field mt-1 w-full px-3 py-2 text-right"
               value={costs[key] ?? 0}
               min={0}
               step={1_000}
@@ -58,19 +58,19 @@ export function CostsForm({ costs, onChange, loanAmount }: CostsFormProps) {
             {key === 'mortgageRegistration' && costs[key] !== suggestedRegistration ? (
               <button
                 type="button"
-                className="mt-1 text-xs text-blue-600 hover:underline"
+                className="mt-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
                 onClick={() => onChange({ ...costs, mortgageRegistration: suggestedRegistration })}
               >
                 ใช้ {formatBaht(suggestedRegistration)} (1% ของวงเงิน)
               </button>
             ) : help ? (
-              <span className="mt-1 block text-xs text-slate-500">{help}</span>
+              <span className="ink-muted mt-1 block text-xs">{help}</span>
             ) : null}
           </label>
         ))}
       </div>
 
-      <p className="mt-4 border-t border-slate-200 pt-3 text-right text-sm text-slate-700">
+      <p className="hairline ink mt-4 border-t pt-3 text-right text-sm">
         รวมค่าใช้จ่าย <strong className="text-base">{formatBaht(total)}</strong>
       </p>
     </section>

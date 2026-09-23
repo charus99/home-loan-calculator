@@ -39,9 +39,9 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-      {hint ? <p className="mt-1 text-sm text-slate-500">{hint}</p> : null}
+    <section className="panel p-5">
+      <h2 className="ink-strong text-lg font-semibold">{title}</h2>
+      {hint ? <p className="ink-muted mt-1 text-sm">{hint}</p> : null}
 
       <div className="mt-4 space-y-4">
         <NumberField
@@ -64,19 +64,19 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
         />
 
         <fieldset>
-          <legend className="text-sm font-medium text-slate-700">
+          <legend className="ink text-sm font-medium">
             อัตราดอกเบี้ยแบบขั้นบันได
           </legend>
           <div className="mt-2 space-y-2">
             {terms.rateTiers.map((tier, index) => (
               <div key={index} className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-sm text-slate-600">
+                <span className="ink w-20 shrink-0 text-sm">
                   {index === 0 ? 'ตั้งแต่เดือน' : 'เดือนที่'}
                 </span>
                 <input
                   type="number"
                   aria-label={`ช่วงที่ ${index + 1} เริ่มเดือนที่`}
-                  className="w-20 rounded border border-slate-300 px-2 py-1 text-right"
+                  className="field w-20 px-2 py-1 text-right"
                   value={tier.fromMonth}
                   min={1}
                   disabled={index === 0}
@@ -87,7 +87,7 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
                 <input
                   type="number"
                   aria-label={`ช่วงที่ ${index + 1} อัตราดอกเบี้ย`}
-                  className="w-24 rounded border border-slate-300 px-2 py-1 text-right"
+                  className="field w-24 px-2 py-1 text-right"
                   value={tier.annualRatePercent}
                   min={0}
                   max={100}
@@ -96,13 +96,13 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
                     updateTier(index, { annualRatePercent: Number(event.target.value) })
                   }
                 />
-                <span className="text-sm text-slate-600">%</span>
+                <span className="ink text-sm">%</span>
                 {terms.rateTiers.length > 1 && index > 0 ? (
                   <button
                     type="button"
                     onClick={() => removeTier(index)}
                     aria-label={`ลบช่วงที่ ${index + 1}`}
-                    className="ml-auto rounded px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
+                    className="ink-muted ml-auto rounded px-2 py-1 text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     ลบ
                   </button>
@@ -114,7 +114,7 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
           <button
             type="button"
             onClick={addTier}
-            className="mt-2 rounded border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50"
+            className="field ink mt-2 px-3 py-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             + เพิ่มช่วงอัตราดอกเบี้ย
           </button>
@@ -131,7 +131,7 @@ export function LoanForm({ title, terms, onChange, hint }: LoanFormProps) {
         />
       </div>
 
-      <p className="mt-4 text-xs text-slate-400">
+      <p className="ink-muted mt-4 text-xs">
         อัตราปัจจุบัน {formatRate(terms.rateTiers[0].annualRatePercent)}
       </p>
     </section>
@@ -161,20 +161,20 @@ function NumberField({
 }: NumberFieldProps) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <span className="ink text-sm font-medium">{label}</span>
       <span className="mt-1 flex items-center gap-2">
         <input
           type="number"
-          className="w-full rounded border border-slate-300 px-3 py-2 text-right"
+          className="field w-full px-3 py-2 text-right"
           value={value}
           min={min}
           max={max}
           step={step}
           onChange={(event) => onChange(Number(event.target.value))}
         />
-        {suffix ? <span className="shrink-0 text-sm text-slate-600">{suffix}</span> : null}
+        {suffix ? <span className="ink shrink-0 text-sm">{suffix}</span> : null}
       </span>
-      {help ? <span className="mt-1 block text-xs text-slate-500">{help}</span> : null}
+      {help ? <span className="ink-muted mt-1 block text-xs">{help}</span> : null}
     </label>
   )
 }

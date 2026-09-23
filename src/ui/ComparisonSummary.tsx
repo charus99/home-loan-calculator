@@ -44,10 +44,12 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
 
       <div
         className={`rounded-xl border p-5 ${
-          worthwhile ? 'border-emerald-300 bg-emerald-50' : 'border-amber-300 bg-amber-50'
+          worthwhile
+            ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950'
+            : 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950'
         }`}
       >
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="ink-strong text-lg font-semibold">
           {worthwhile ? 'คุ้มที่จะเปลี่ยน' : 'ยังไม่คุ้มที่จะเปลี่ยน'}
         </h2>
         <p className="sr-only">
@@ -55,7 +57,7 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
         </p>
 
         {cheaperMonthlyButCostlier ? (
-          <p className="mt-2 rounded bg-white/70 p-3 text-sm text-amber-900">
+          <p className="mt-2 rounded bg-white/70 p-3 text-sm text-amber-900 dark:bg-black/30 dark:text-amber-200">
             <strong>ระวัง:</strong> ค่างวดต่อเดือนถูกลงก็จริง
             แต่ดอกเบี้ยรวมตลอดสัญญาแพงกว่าเดิม เพราะค่างวดถูกตั้งจากอัตราโปรโมชัน
             พอหมดโปรฯ ค่างวดเท่าเดิมจะตัดเงินต้นได้น้อยลง
@@ -64,20 +66,22 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
 
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
-            <dt className="text-sm text-slate-600">ดอกเบี้ยที่ประหยัดได้</dt>
-            <dd className="text-xl font-semibold text-slate-900">
+            <dt className="ink text-sm">ดอกเบี้ยที่ประหยัดได้</dt>
+            <dd className="ink-strong text-xl font-semibold">
               {formatBaht(grossInterestSaved)}
             </dd>
           </div>
           <div>
-            <dt className="text-sm text-slate-600">หักค่าใช้จ่าย</dt>
-            <dd className="text-xl font-semibold text-slate-900">−{formatBaht(totalCosts)}</dd>
+            <dt className="ink text-sm">หักค่าใช้จ่าย</dt>
+            <dd className="ink-strong text-xl font-semibold">−{formatBaht(totalCosts)}</dd>
           </div>
           <div>
-            <dt className="text-sm text-slate-600">ประหยัดสุทธิ</dt>
+            <dt className="ink text-sm">ประหยัดสุทธิ</dt>
             <dd
               className={`text-2xl font-bold ${
-                worthwhile ? 'text-emerald-700' : 'text-amber-700'
+                worthwhile
+                  ? 'text-emerald-700 dark:text-emerald-300'
+                  : 'text-amber-700 dark:text-amber-300'
               }`}
             >
               {formatBaht(netSaving)}
@@ -85,7 +89,7 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
           </div>
         </dl>
 
-        <p className="mt-4 text-sm text-slate-700">
+        <p className="ink mt-4 text-sm">
           {comparison.breakEvenMonth === null ? (
             'ไม่มีจุดคุ้มทุน — ทางเลือกนี้ไม่คืนทุนตลอดอายุสัญญา'
           ) : (
@@ -125,11 +129,14 @@ function LoanTotals({
   hasNegativeAmortization,
 }: LoanTotalsProps) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="font-semibold text-slate-900">{title}</h3>
+    <div className="panel p-5">
+      <h3 className="ink-strong font-semibold">{title}</h3>
 
       {hasNegativeAmortization ? (
-        <p role="alert" className="mt-2 rounded bg-red-50 p-2 text-sm text-red-800">
+        <p
+          role="alert"
+          className="mt-2 rounded bg-red-50 p-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-300"
+        >
           ค่างวดไม่พอจ่ายดอกเบี้ย หนี้จะเพิ่มขึ้นแทนที่จะลดลง
         </p>
       ) : null}
@@ -155,8 +162,8 @@ function Row({
 }) {
   return (
     <div className="flex justify-between gap-4">
-      <dt className="text-slate-600">{label}</dt>
-      <dd className={emphasis ? 'font-semibold text-slate-900' : 'text-slate-900'}>{value}</dd>
+      <dt className="ink">{label}</dt>
+      <dd className={emphasis ? 'ink-strong font-semibold' : 'ink-strong'}>{value}</dd>
     </div>
   )
 }

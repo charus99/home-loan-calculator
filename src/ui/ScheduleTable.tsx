@@ -20,13 +20,13 @@ export function ScheduleTable({ schedule, title }: ScheduleTableProps) {
   const rows = expanded ? schedule.rows : schedule.rows.slice(0, INITIAL_ROWS)
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <h3 className="font-semibold text-slate-900">{title}</h3>
+    <section className="panel p-5">
+      <h3 className="ink-strong font-semibold">{title}</h3>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full text-right text-sm tabular-nums">
+        <table className="ink-strong w-full text-right text-sm tabular-nums">
           <thead>
-            <tr className="border-b border-slate-200 text-slate-600">
+            <tr className="hairline ink border-b">
               <th scope="col" className="py-2 pr-3 text-left font-medium">งวด</th>
               <th scope="col" className="py-2 pr-3 font-medium">อัตรา</th>
               <th scope="col" className="py-2 pr-3 font-medium">ค่างวด</th>
@@ -37,11 +37,14 @@ export function ScheduleTable({ schedule, title }: ScheduleTableProps) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.month} className="border-b border-slate-100 last:border-0">
-                <th scope="row" className="py-1.5 pr-3 text-left font-normal text-slate-600">
+              <tr
+                key={row.month}
+                className="border-b border-slate-100 last:border-0 dark:border-slate-800"
+              >
+                <th scope="row" className="ink py-1.5 pr-3 text-left font-normal">
                   {row.month}
                 </th>
-                <td className="py-1.5 pr-3 text-slate-600">
+                <td className="ink py-1.5 pr-3">
                   {formatRate(row.annualRatePercent)}
                 </td>
                 <td className="py-1.5 pr-3">{formatBahtPrecise(row.payment)}</td>
@@ -58,7 +61,7 @@ export function ScheduleTable({ schedule, title }: ScheduleTableProps) {
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
-          className="mt-3 rounded border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50"
+          className="field ink mt-3 px-3 py-1 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           {expanded
             ? 'ย่อ'

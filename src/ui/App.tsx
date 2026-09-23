@@ -94,11 +94,11 @@ export default function App() {
   }, [currentLoan, alternativeLoan, costs, problems])
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <main className="mx-auto max-w-5xl px-4 py-10">
         <header>
-          <h1 className="text-3xl font-bold text-slate-900">คำนวณสินเชื่อบ้าน</h1>
-          <p className="mt-2 text-slate-600">
+          <h1 className="ink-strong text-3xl font-bold">คำนวณสินเชื่อบ้าน</h1>
+          <p className="ink mt-2">
             เปรียบเทียบสินเชื่อปัจจุบันกับทางเลือกใหม่ ดอกเบี้ยลดต้นรายวันแบบธนาคารไทย
           </p>
         </header>
@@ -123,18 +123,26 @@ export default function App() {
         </div>
 
         {problems.length > 0 ? (
-          <div role="alert" className="mt-6 rounded-xl border border-red-300 bg-red-50 p-5">
-            <h2 className="font-semibold text-red-900">ตรวจสอบข้อมูลที่กรอก</h2>
-            <ul className="mt-2 list-inside list-disc text-sm text-red-800">
+          <div
+            role="alert"
+            className="mt-6 rounded-xl border border-red-300 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950"
+          >
+            <h2 className="font-semibold text-red-900 dark:text-red-200">
+              ตรวจสอบข้อมูลที่กรอก
+            </h2>
+            <ul className="mt-2 list-inside list-disc text-sm text-red-800 dark:text-red-300">
               {problems.map((problem) => (
                 <li key={problem}>{problem}</li>
               ))}
             </ul>
           </div>
         ) : comparison instanceof Error ? (
-          <div role="alert" className="mt-6 rounded-xl border border-red-300 bg-red-50 p-5">
-            <h2 className="font-semibold text-red-900">คำนวณไม่สำเร็จ</h2>
-            <p className="mt-1 text-sm text-red-800">{comparison.message}</p>
+          <div
+            role="alert"
+            className="mt-6 rounded-xl border border-red-300 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950"
+          >
+            <h2 className="font-semibold text-red-900 dark:text-red-200">คำนวณไม่สำเร็จ</h2>
+            <p className="mt-1 text-sm text-red-800 dark:text-red-300">{comparison.message}</p>
           </div>
         ) : comparison ? (
           <>
@@ -170,7 +178,7 @@ export default function App() {
           </>
         ) : null}
 
-        <footer className="mt-10 border-t border-slate-200 pt-6 text-sm text-slate-500">
+        <footer className="hairline ink-muted mt-10 border-t pt-6 text-sm">
           <p>
             ตัวเลขนี้ยังไม่ได้เทียบกับตารางผ่อนจริงของธนาคาร
             ใช้ประกอบการตัดสินใจได้ แต่อย่าถือเป็นตัวเลขทางการ

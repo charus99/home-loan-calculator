@@ -8,7 +8,8 @@ import {
   YAxis,
 } from 'recharts'
 import type { RefinanceComparison } from '../../core/types'
-import { BREAK_EVEN_COLOR, CHART_CHROME, LOAN_COLORS } from '../chartTheme'
+import { chartTheme } from '../chartTheme'
+import { useColorScheme } from '../useColorScheme'
 import { buildYearTicks, formatYearTick } from './axis'
 import { ChartFrame } from './BalanceChart'
 import { formatMonthLabel, formatTooltipBaht } from './tooltipFormatters'
@@ -25,6 +26,7 @@ interface BreakEvenChartProps {
  * refinance and move before that month and the switch has cost money.
  */
 export function BreakEvenChart({ comparison }: BreakEvenChartProps) {
+  const theme = chartTheme(useColorScheme())
   const { cumulativeNet, breakEvenMonth } = comparison
 
   const data = cumulativeNet.map((net, index) => ({ month: index + 1, net }))
@@ -40,40 +42,40 @@ export function BreakEvenChart({ comparison }: BreakEvenChartProps) {
       }
     >
       <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
-        <CartesianGrid stroke={CHART_CHROME.gridline} vertical={false} />
+        <CartesianGrid stroke={theme.chrome.gridline} vertical={false} />
         <XAxis
           dataKey="month"
           type="number"
           domain={[1, data.length]}
           ticks={yearTicks}
           tickFormatter={formatYearTick}
-          stroke={CHART_CHROME.axis}
-          tick={{ fill: CHART_CHROME.mutedText, fontSize: 12 }}
+          stroke={theme.chrome.axis}
+          tick={{ fill: theme.chrome.mutedText, fontSize: 12 }}
           label={{ value: 'ปี', position: 'insideBottomRight', offset: -4, fontSize: 12 }}
         />
         <YAxis
           tickFormatter={(value: number) => `${Math.round(value / 1_000)}k`}
-          stroke={CHART_CHROME.axis}
-          tick={{ fill: CHART_CHROME.mutedText, fontSize: 12 }}
+          stroke={theme.chrome.axis}
+          tick={{ fill: theme.chrome.mutedText, fontSize: 12 }}
           width={56}
         />
         <Tooltip formatter={formatTooltipBaht} labelFormatter={formatMonthLabel} />
-        <ReferenceLine y={0} stroke={CHART_CHROME.axis} strokeWidth={1} />
+        <ReferenceLine y={0} stroke={theme.chrome.axis} strokeWidth={1} />
         {breakEvenMonth !== null ? (
           <ReferenceLine
             x={breakEvenMonth}
-            stroke={BREAK_EVEN_COLOR}
+            stroke={theme.breakEven}
             strokeDasharray="4 4"
-            label={{ value: 'คืนทุน', position: 'top', fill: BREAK_EVEN_COLOR, fontSize: 12 }}
+            label={{ value: 'คืนทุน', position: 'top', fill: theme.breakEven, fontSize: 12 }}
           />
         ) : null}
         <Area
           type="monotone"
           dataKey="net"
           name="สถานะสุทธิ"
-          stroke={LOAN_COLORS.alternative}
+          stroke={theme.loan.alternative}
           strokeWidth={2}
-          fill={LOAN_COLORS.alternative}
+          fill={theme.loan.alternative}
           fillOpacity={0.12}
         />
       </AreaChart>

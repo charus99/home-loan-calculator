@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Schedule } from '../../core/types'
-import { CHART_CHROME, PAYMENT_SPLIT_COLORS } from '../chartTheme'
+import { chartTheme } from '../chartTheme'
+import { useColorScheme } from '../useColorScheme'
 import { ChartFrame } from './BalanceChart'
 import { formatTooltipBaht, formatYearLabel } from './tooltipFormatters'
 
@@ -19,6 +20,8 @@ interface PaymentSplitChartProps {
  * and say less than 30 readable ones.
  */
 export function PaymentSplitChart({ schedule, title }: PaymentSplitChartProps) {
+  const theme = chartTheme(useColorScheme())
+
   // One bar per year is still 22 bars on a half-width chart, which crowds the
   // labels. Sampling every other year keeps the shape of the shift readable.
   const yearlyRows = schedule.rows.filter((row) => row.month % 12 === 1)
@@ -35,17 +38,17 @@ export function PaymentSplitChart({ schedule, title }: PaymentSplitChartProps) {
   return (
     <ChartFrame title={title} description="ช่วงแรกจ่ายดอกเบี้ยเป็นส่วนใหญ่ (ตัวอย่างงวดแรกของแต่ละปี)">
       <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
-        <CartesianGrid stroke={CHART_CHROME.gridline} vertical={false} />
+        <CartesianGrid stroke={theme.chrome.gridline} vertical={false} />
         <XAxis
           dataKey="year"
-          stroke={CHART_CHROME.axis}
-          tick={{ fill: CHART_CHROME.mutedText, fontSize: 12 }}
+          stroke={theme.chrome.axis}
+          tick={{ fill: theme.chrome.mutedText, fontSize: 12 }}
           label={{ value: 'ปี', position: 'insideBottomRight', offset: -4, fontSize: 12 }}
         />
         <YAxis
           tickFormatter={(value: number) => `${Math.round(value / 1_000)}k`}
-          stroke={CHART_CHROME.axis}
-          tick={{ fill: CHART_CHROME.mutedText, fontSize: 12 }}
+          stroke={theme.chrome.axis}
+          tick={{ fill: theme.chrome.mutedText, fontSize: 12 }}
           width={48}
         />
         <Tooltip formatter={formatTooltipBaht} labelFormatter={formatYearLabel} />
@@ -54,13 +57,13 @@ export function PaymentSplitChart({ schedule, title }: PaymentSplitChartProps) {
           dataKey="interest"
           name="ดอกเบี้ย"
           stackId="payment"
-          fill={PAYMENT_SPLIT_COLORS.interest}
+          fill={theme.paymentSplit.interest}
         />
         <Bar
           dataKey="principal"
           name="เงินต้น"
           stackId="payment"
-          fill={PAYMENT_SPLIT_COLORS.principal}
+          fill={theme.paymentSplit.principal}
           radius={[4, 4, 0, 0]}
         />
       </BarChart>
