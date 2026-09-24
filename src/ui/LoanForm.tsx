@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { LoanTerms, RateTier } from '../core/types'
+import { chartTheme, type ChartTheme } from './chartTheme'
 import { formatBaht, formatDuration } from './format'
+import { NumberField } from './NumberField'
+import { useTheme } from './ThemeContext'
 
 interface LoanFormProps {
   title: string
@@ -22,6 +25,12 @@ interface LoanFormProps {
   inheritedPayment?: number
   /** Months until payoff, computed from the inputs, shown back as feedback. */
   monthsToPayoff?: number
+  /**
+   * Which loan this column is, so it wears the same colour as its line in the
+   * charts. Taken from chartTheme rather than restated, so the two can never
+   * drift apart.
+   */
+  accent: keyof ChartTheme['loan']
 }
 
 /**
@@ -35,7 +44,10 @@ export function LoanForm({
   paymentField,
   inheritedPayment,
   monthsToPayoff,
+  accent,
 }: LoanFormProps) {
+  const accentColor = chartTheme(useTheme()).loan[accent]
+
   const updateTier = (index: number, patch: Partial<RateTier>) => {
     const rateTiers = terms.rateTiers.map((tier, i) =>
       i === index ? { ...tier, ...patch } : tier,
@@ -59,8 +71,18 @@ export function LoanForm({
   }
 
   return (
-    <section className="panel p-5">
-      <h2 className="ink-strong text-lg font-semibold">{title}</h2>
+    <section
+      className="panel overflow-hidden border-t-4 p-5"
+      style={{ borderTopColor: accentColor }}
+    >
+      <h2 className="ink-strong flex items-center gap-2 text-lg font-semibold">
+        <span
+          aria-hidden="true"
+          className="inline-block h-3 w-3 rounded-full"
+          style={{ backgroundColor: accentColor }}
+        />
+        {title}
+      </h2>
       {hint ? <p className="ink-muted mt-1 text-sm">{hint}</p> : null}
 
       <div className="mt-4 space-y-4">
@@ -217,64 +239,5 @@ function RateInput({
       }}
       onBlur={() => setDraft(null)}
     />
-  )
-}
-
-interface NumberFieldProps {
-  label: string
-  /** null renders an empty field, for an optional amount that is not set. */
-  value: number | null
-  onChange: (value: number) => void
-  suffix?: string
-  help?: string
-  /** Decimal places accepted. Omitted means whole numbers only. */
-  decimals?: number
-}
-
-function NumberField({ label, value, onChange, suffix, help, decimals = 0 }: NumberFieldProps) {
-  // Held as text while the field has focus. A controlled number would rewrite
-  // "17110." back to "17110" as soon as the decimal point is typed, making a
-  // fractional amount impossible to enter; it would also expand a value the
-  // migration computed to its full twelve decimals.
-  const [draft, setDraft] = useState<string | null>(null)
-
-  const accepts = (text: string) => {
-    if (text === '') {
-      return true
-    }
-    const pattern = decimals > 0 ? new RegExp(`^\\d*\\.?\\d{0,${decimals}}$`) : /^\d*$/
-    return pattern.test(text)
-  }
-
-  return (
-    <label className="block">
-      <span className="ink text-sm font-medium">{label}</span>
-      <span className="mt-1 flex items-center gap-2">
-        <input
-          type="text"
-          inputMode="decimal"
-          className="field w-full px-3 py-2 text-right"
-          value={draft ?? (value === null ? '' : String(value))}
-          onChange={(event) => {
-            const text = event.target.value
-            if (!accepts(text)) {
-              return
-            }
-            setDraft(text)
-            // An empty or partial entry ("17110.") is not a number yet; the
-            // previous value stands until it becomes one.
-            const parsed = Number(text)
-            if (text !== '' && Number.isFinite(parsed)) {
-              onChange(parsed)
-            } else if (text === '') {
-              onChange(0)
-            }
-          }}
-          onBlur={() => setDraft(null)}
-        />
-        {suffix ? <span className="ink shrink-0 text-sm">{suffix}</span> : null}
-      </span>
-      {help ? <span className="ink-muted mt-1 block text-xs">{help}</span> : null}
-    </label>
   )
 }

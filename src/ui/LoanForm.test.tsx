@@ -20,15 +20,39 @@ function renderForm(overrides: Partial<LoanTerms> = {}) {
       terms={{ ...TERMS, ...overrides }}
       onChange={onChange}
       paymentField="required"
+      accent="current"
     />,
   )
   return { onChange }
 }
 
 describe('LoanForm amount fields', () => {
-  it('shows a whole amount without a decimal point', () => {
+  it('groups an amount with commas when not being edited', () => {
     renderForm()
-    expect(screen.getByLabelText(/ค่างวดต่อเดือน/)).toHaveValue('17100')
+    expect(screen.getByLabelText(/เงินต้นคงเหลือ/)).toHaveValue('2,400,000')
+    expect(screen.getByLabelText(/ค่างวดต่อเดือน/)).toHaveValue('17,100')
+  })
+
+  it('shows bare digits while the field has focus', async () => {
+    // Inserting separators mid-entry moves the caret under the typist.
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByLabelText(/เงินต้นคงเหลือ/))
+    expect(screen.getByLabelText(/เงินต้นคงเหลือ/)).toHaveValue('2400000')
+  })
+
+  it('accepts a figure pasted with commas', async () => {
+    const user = userEvent.setup()
+    const { onChange } = renderForm()
+
+    const field = screen.getByLabelText(/เงินต้นคงเหลือ/)
+    await user.clear(field)
+    await user.paste('3,351,338.19')
+
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ principal: 3_351_338.19 }),
+    )
   })
 
   it('accepts two decimal places', async () => {
@@ -102,6 +126,7 @@ describe('LoanForm optional instalment', () => {
         terms={{ ...TERMS, monthlyPayment }}
         onChange={onChange}
         paymentField="optional"
+        accent="alternative"
         inheritedPayment={17_100}
       />,
     )

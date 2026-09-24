@@ -1,6 +1,7 @@
 import { estimateMortgageRegistration, totalRefinanceCosts } from '../core/refinance'
 import type { RefinanceCosts } from '../core/types'
 import { formatBaht } from './format'
+import { NumberField } from './NumberField'
 
 interface CostsFormProps {
   costs: RefinanceCosts
@@ -38,38 +39,43 @@ export function CostsForm({ costs, onChange, loanAmount }: CostsFormProps) {
 
   return (
     <section className="panel p-5">
-      <h2 className="ink-strong text-lg font-semibold">ค่าใช้จ่ายในการรีไฟแนนซ์</h2>
-      <p className="ink-muted mt-1 text-sm">
+      {/* Visually carried by the step label above; kept for the outline a
+          screen reader navigates by. */}
+      <h2 className="sr-only">ค่าใช้จ่ายในการรีไฟแนนซ์</h2>
+      <p className="ink-muted text-sm">
         ค่าใช้จ่ายเหล่านี้ถูกหักออกจากดอกเบี้ยที่ประหยัดได้ ก่อนสรุปว่าคุ้มหรือไม่
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {FIELDS.map(({ key, label, help }) => (
-          <label key={key} className="block">
-            <span className="ink text-sm font-medium">{label}</span>
-            <input
-              type="number"
-              className="field mt-1 w-full px-3 py-2 text-right"
+        {FIELDS.map(({ key, label, help }) => {
+          const offerSuggestion =
+            key === 'mortgageRegistration' && costs[key] !== suggestedRegistration
+
+          return (
+            <NumberField
+              key={key}
+              label={label}
+              suffix="บาท"
               value={costs[key] ?? 0}
-              min={0}
-              // No step: fees such as a 1,200 baht stamp duty are not round
-              // thousands, and a step makes the browser treat them as invalid.
-              step="any"
-              onChange={(event) => onChange({ ...costs, [key]: Number(event.target.value) })}
+              decimals={2}
+              onChange={(amount) => onChange({ ...costs, [key]: amount })}
+              help={offerSuggestion ? undefined : help}
+              below={
+                offerSuggestion ? (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                    onClick={() =>
+                      onChange({ ...costs, mortgageRegistration: suggestedRegistration })
+                    }
+                  >
+                    ใช้ {formatBaht(suggestedRegistration)} (1% ของวงเงิน)
+                  </button>
+                ) : null
+              }
             />
-            {key === 'mortgageRegistration' && costs[key] !== suggestedRegistration ? (
-              <button
-                type="button"
-                className="mt-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
-                onClick={() => onChange({ ...costs, mortgageRegistration: suggestedRegistration })}
-              >
-                ใช้ {formatBaht(suggestedRegistration)} (1% ของวงเงิน)
-              </button>
-            ) : help ? (
-              <span className="ink-muted mt-1 block text-xs">{help}</span>
-            ) : null}
-          </label>
-        ))}
+          )
+        })}
       </div>
 
       <p className="hairline ink mt-4 border-t pt-3 text-right text-sm">

@@ -127,7 +127,7 @@ describe('App', () => {
     unmount()
     render(<App />)
 
-    expect(screen.getAllByLabelText(/เงินต้นคงเหลือ/)[0]).toHaveValue('1500000')
+    expect(screen.getAllByLabelText(/เงินต้นคงเหลือ/)[0]).toHaveValue('1,500,000')
   })
 
   it('offers an instalment field in both columns', () => {

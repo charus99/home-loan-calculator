@@ -20,7 +20,10 @@ export function ScheduleTable({ schedule, title }: ScheduleTableProps) {
   const rows = expanded ? schedule.rows : schedule.rows.slice(0, INITIAL_ROWS)
 
   return (
-    <section className="panel p-5">
+    // min-w-0: as a grid item this would otherwise grow to the table's full
+    // width and push the page sideways on a phone, instead of letting the
+    // table scroll inside its own box.
+    <section className="panel min-w-0 p-5">
       <h3 className="ink-strong font-semibold">{title}</h3>
 
       <div className="mt-3 overflow-x-auto">

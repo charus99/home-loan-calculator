@@ -16,7 +16,7 @@ import type { ColorScheme } from './useColorScheme'
  * full schedule table.
  */
 
-interface ChartTheme {
+export interface ChartTheme {
   /** The two loans being compared. Distinct hues, not shades of one. */
   loan: { current: string; alternative: string }
   /**

@@ -9,8 +9,9 @@ import { ComparisonSummary } from './ComparisonSummary'
 import { CostsForm } from './CostsForm'
 import { LoanForm } from './LoanForm'
 import { ScheduleTable } from './ScheduleTable'
-import { roundToSatang } from './format'
+import { formatBaht, roundToSatang } from './format'
 import { ThemeProvider } from './ThemeContext'
+import { StepLabel } from './StepLabel'
 import { ThemeToggle } from './ThemeToggle'
 import { useStoredState } from './useStoredState'
 import { useThemePreference } from './useColorScheme'
@@ -182,14 +183,25 @@ export default function App() {
     <ThemeProvider value={scheme}>
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <main className="mx-auto max-w-5xl px-4 py-10">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="ink-strong text-3xl font-bold">คำนวณสินเชื่อบ้าน</h1>
-            <p className="ink mt-2">
-              เปรียบเทียบสินเชื่อปัจจุบันกับทางเลือกใหม่ ดอกเบี้ยลดต้นรายวันแบบธนาคารไทย
-            </p>
+        {/* White text on blue-700 → indigo-600 measures above 6:1 at both
+            ends of the gradient; the dark variant keeps the same hue family
+            but drops the brightness so it does not glare against the page. */}
+        <header className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-gradient-to-br from-blue-700 to-indigo-600 px-6 py-7 text-white shadow-lg dark:from-blue-950 dark:to-indigo-950 dark:ring-1 dark:ring-white/10">
+          <div className="flex items-start gap-4">
+            <span
+              aria-hidden="true"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/15 text-2xl"
+            >
+              🏠
+            </span>
+            <div>
+              <h1 className="text-3xl font-bold">คำนวณสินเชื่อบ้าน</h1>
+              <p className="mt-1 text-white/85">
+                เปรียบเทียบสินเชื่อปัจจุบันกับทางเลือกใหม่ ดอกเบี้ยลดต้นรายวันแบบธนาคารไทย
+              </p>
+            </div>
           </div>
-          <ThemeToggle preference={preference} onChange={setPreference} />
+          <ThemeToggle preference={preference} onChange={setPreference} tone="onColor" />
         </header>
 
         <form
@@ -203,12 +215,14 @@ export default function App() {
             calculate()
           }}
         >
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <StepLabel step={1} title="ข้อมูลสินเชื่อ" className="mt-8" />
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
           <LoanForm
             title="สินเชื่อปัจจุบัน"
             hint="กรอกยอดคงเหลือ ค่างวด และอัตราที่จ่ายอยู่ตอนนี้"
             terms={currentLoan}
             onChange={setCurrentLoan}
+            accent="current"
             paymentField="required"
             monthsToPayoff={
               isStale || comparison instanceof Error
@@ -221,6 +235,7 @@ export default function App() {
             hint="ข้อเสนอรีไฟแนนซ์ หรือของธนาคารอีกเจ้า"
             terms={alternativeLoan}
             onChange={setAlternativeLoan}
+            accent="alternative"
             paymentField="optional"
             inheritedPayment={currentLoan.monthlyPayment}
             monthsToPayoff={
@@ -231,6 +246,7 @@ export default function App() {
           />
         </div>
 
+        <StepLabel step={2} title="ค่าใช้จ่ายรีไฟแนนซ์" className="mt-8" />
         <div className="mt-4">
           <CostsForm costs={costs} onChange={setCosts} loanAmount={alternativeLoan.principal} />
         </div>
@@ -247,9 +263,27 @@ export default function App() {
             คำนวณ
           </button>
           <p role="status" className="ink-muted text-sm">
-            {isStale
-              ? 'มีการแก้ตัวเลข กดคำนวณหรือกด Enter เพื่ออัปเดตผลลัพธ์'
-              : 'ผลลัพธ์ด้านล่างตรงกับตัวเลขที่กรอกแล้ว'}
+            {isStale ? (
+              'มีการแก้ตัวเลข กดคำนวณหรือกด Enter เพื่ออัปเดตผลลัพธ์'
+            ) : comparison && !(comparison instanceof Error) ? (
+              // The verdict in brief, so the answer stays in view while the
+              // loan fields at the top are being edited.
+              <span className="ink-strong text-base">
+                <span
+                  className={
+                    comparison.netSaving > 0
+                      ? 'font-semibold text-emerald-700 dark:text-emerald-300'
+                      : 'font-semibold text-amber-700 dark:text-amber-300'
+                  }
+                >
+                  {comparison.netSaving > 0 ? '✓ คุ้ม' : '! ยังไม่คุ้ม'}
+                </span>
+                {' · '}
+                ประหยัด <strong className="tabular-nums">{formatBaht(comparison.netSaving)}</strong>
+              </span>
+            ) : (
+              'ตรวจสอบข้อมูลที่กรอกด้านล่าง'
+            )}
           </p>
         </div>
         </form>
@@ -282,7 +316,8 @@ export default function App() {
           </div>
         ) : comparison ? (
           <>
-            <div className="mt-8">
+            <StepLabel step={3} title="ผลลัพธ์" className="mt-10" />
+            <div className="mt-4">
               <ComparisonSummary comparison={comparison} />
             </div>
 
