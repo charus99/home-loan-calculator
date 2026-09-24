@@ -60,18 +60,22 @@ export function NumberField({
             type="text"
             inputMode="decimal"
             className="field w-full px-3 py-2 text-right tabular-nums"
-            // Grouped with commas when at rest so a seven-digit amount can be
-            // read at a glance; bare digits while typing, because inserting
-            // separators mid-entry moves the caret under the visitor's fingers.
+            // Grouped with commas at rest so a seven-digit amount can be read at
+            // a glance. While editing, the field shows exactly what was typed,
+            // commas and all, and they are stripped only for parsing.
+            //
+            // Nothing is rewritten on focus: swapping "17,100" for "17100" the
+            // moment the field was entered discarded the selection the browser
+            // makes on Tab, so the next figure typed was appended rather than
+            // replacing it — 14800 became 1710014800.
             value={draft ?? (value === null ? '' : formatGrouped(value))}
-            onFocus={() => setDraft(value === null ? '' : String(value))}
             onChange={(event) => {
-              // Commas are accepted so a figure pasted from a statement works.
-              const text = event.target.value.replace(/,/g, '')
+              const typed = event.target.value
+              const text = typed.replace(/,/g, '')
               if (!accepts(text)) {
                 return
               }
-              setDraft(text)
+              setDraft(typed)
               // An empty or partial entry ("17110.") is not a number yet; the
               // previous value stands until it becomes one.
               const parsed = Number(text)

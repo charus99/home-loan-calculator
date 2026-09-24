@@ -38,6 +38,19 @@ export function formatBahtPrecise(amount: number): string {
   return preciseBahtFormatter.format(amount)
 }
 
+// th-TH defaults to the Buddhist calendar, matching the year on a Thai bank
+// statement: 24 October 2026 reads "24 ต.ค. 69".
+const thaiDateFormatter = new Intl.DateTimeFormat('th-TH', {
+  day: 'numeric',
+  month: 'short',
+  year: '2-digit',
+})
+
+/** Formats a due date the way a Thai statement prints it, e.g. "24 ต.ค. 69". */
+export function formatThaiDate(date: Date): string {
+  return thaiDateFormatter.format(date)
+}
+
 /** Formats an annual rate, e.g. 6.5 becomes "6.50%". */
 export function formatRate(annualRatePercent: number): string {
   return `${annualRatePercent.toFixed(2)}%`

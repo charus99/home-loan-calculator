@@ -3,7 +3,7 @@ import {
   accrueInterest,
   annuityPayment,
   DAYS_PER_YEAR,
-  daysInPeriod,
+  daysBetween,
   paymentDate,
   rateForMonth,
   validateRateTiers,
@@ -108,22 +108,39 @@ describe('validateRateTiers', () => {
   })
 })
 
-describe('daysInPeriod', () => {
+describe('daysBetween', () => {
   it('counts the real length of each month', () => {
-    expect(daysInPeriod(new Date(2026, 2, 15))).toBe(28) // Feb 15 to Mar 15
-    expect(daysInPeriod(new Date(2026, 3, 15))).toBe(31) // Mar 15 to Apr 15
-    expect(daysInPeriod(new Date(2026, 4, 15))).toBe(30) // Apr 15 to May 15
+    expect(daysBetween(new Date(2026, 1, 15), new Date(2026, 2, 15))).toBe(28)
+    expect(daysBetween(new Date(2026, 2, 15), new Date(2026, 3, 15))).toBe(31)
+    expect(daysBetween(new Date(2026, 3, 15), new Date(2026, 4, 15))).toBe(30)
   })
 
   it('counts the extra day in a leap February', () => {
-    expect(daysInPeriod(new Date(2028, 2, 15))).toBe(29) // 2028 is a leap year
+    expect(daysBetween(new Date(2028, 1, 15), new Date(2028, 2, 15))).toBe(29)
   })
 
   it('sums to a full year over twelve consecutive periods', () => {
     // This is what makes a rate/12 instalment agree with daily-rest accrual.
+    const start = new Date(2026, 0, 15)
     let total = 0
     for (let month = 1; month <= 12; month++) {
-      total += daysInPeriod(new Date(2026, month, 15))
+      total += daysBetween(paymentDate(start, month - 1), paymentDate(start, month))
+    }
+    expect(total).toBe(365)
+  })
+
+  it('counts 31 days from 28 February to 31 March for a loan billed on the 31st', () => {
+    // Regression: stepping back a month from 31 March lands on 3 March and
+    // counted this period as 28 days.
+    const start = new Date(2026, 0, 31)
+    expect(daysBetween(paymentDate(start, 1), paymentDate(start, 2))).toBe(31)
+  })
+
+  it('sums to a full year for a loan billed on the 31st', () => {
+    const start = new Date(2026, 0, 31)
+    let total = 0
+    for (let month = 1; month <= 12; month++) {
+      total += daysBetween(paymentDate(start, month - 1), paymentDate(start, month))
     }
     expect(total).toBe(365)
   })

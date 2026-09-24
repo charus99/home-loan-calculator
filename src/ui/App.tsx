@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { compareRefinance } from '../core/refinance'
-import { annuityPayment, validateRateTiers } from '../core/interest'
+import { annuityPayment, paymentDate, validateRateTiers } from '../core/interest'
 import type { LoanTerms, RefinanceCosts } from '../core/types'
 import { BalanceChart } from './charts/BalanceChart'
 import { BreakEvenChart } from './charts/BreakEvenChart'
@@ -9,6 +9,7 @@ import { ComparisonSummary } from './ComparisonSummary'
 import { CostsForm } from './CostsForm'
 import { LoanForm } from './LoanForm'
 import { ScheduleTable } from './ScheduleTable'
+import { chartTheme } from './chartTheme'
 import { formatBaht, roundToSatang } from './format'
 import { ThemeProvider } from './ThemeContext'
 import { StepLabel } from './StepLabel'
@@ -101,14 +102,55 @@ interface CalculationInputs {
   currentLoan: LoanTerms
   alternativeLoan: LoanTerms
   costs: RefinanceCosts
+  /** Due date of the next instalment, as the date input gives it: YYYY-MM-DD. */
+  nextPaymentDate: string
+}
+
+/**
+ * Reads a YYYY-MM-DD value as a local calendar date.
+ *
+ * new Date('2026-10-24') is parsed as UTC midnight, which is the previous
+ * evening in some time zones and would shift every due date by a day.
+ */
+function parseLocalDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) {
+    return null
+  }
+  const [, year, month, day] = match.map(Number)
+  const date = new Date(year, month - 1, day)
+  // Rejects values such as 2026-02-30 that Date would roll into March.
+  return date.getMonth() === month - 1 && date.getDate() === day ? date : null
+}
+
+/** The same day next month, as a sensible first guess before the visitor sets it. */
+function defaultNextPaymentDate(): string {
+  const date = paymentDate(new Date(), 1)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 /** Validates a set of inputs and, if they are usable, compares the two loans. */
-function runComparison({ currentLoan, alternativeLoan, costs }: CalculationInputs) {
+function runComparison({
+  currentLoan: currentInput,
+  alternativeLoan: alternativeInput,
+  costs,
+  nextPaymentDate,
+}: CalculationInputs) {
   const problems = [
-    ...validateRateTiers(currentLoan.rateTiers).map((p) => `สินเชื่อปัจจุบัน: ${p}`),
-    ...validateRateTiers(alternativeLoan.rateTiers).map((p) => `ทางเลือกใหม่: ${p}`),
+    ...validateRateTiers(currentInput.rateTiers).map((p) => `สินเชื่อปัจจุบัน: ${p}`),
+    ...validateRateTiers(alternativeInput.rateTiers).map((p) => `ทางเลือกใหม่: ${p}`),
   ]
+
+  const firstPaymentDate = parseLocalDate(nextPaymentDate)
+  if (!firstPaymentDate) {
+    problems.push('ต้องกรอกวันชำระงวดถัดไป')
+  }
+
+  // Both loans are measured from the same due date, so they are compared
+  // over identical calendar periods.
+  const currentLoan = { ...currentInput, firstPaymentDate: firstPaymentDate ?? undefined }
+  const alternativeLoan = { ...alternativeInput, firstPaymentDate: firstPaymentDate ?? undefined }
 
   // Without an instalment there is nothing to compare, and the schedule would
   // silently fall back to an annuity over the 40-year ceiling.
@@ -158,6 +200,12 @@ export default function App() {
     reviveLoanTerms(DEFAULT_ALTERNATIVE),
   )
   const [costs, setCosts] = useStoredState('home-loan:costs', DEFAULT_COSTS)
+  // Stored on first visit, so the default guess stays put rather than moving
+  // forward a day each time the page is opened.
+  const [nextPaymentDate, setNextPaymentDate] = useStoredState(
+    'home-loan:next-payment-date',
+    defaultNextPaymentDate(),
+  )
 
   // Results come from the inputs as they stood at the last press of the
   // calculate button, not from what is being typed. Opening the page counts as
@@ -166,9 +214,10 @@ export default function App() {
     currentLoan,
     alternativeLoan,
     costs,
+    nextPaymentDate,
   }))
 
-  const pending: CalculationInputs = { currentLoan, alternativeLoan, costs }
+  const pending: CalculationInputs = { currentLoan, alternativeLoan, costs, nextPaymentDate }
 
   // Edited but not yet calculated. The results then describe other figures
   // than the ones on screen, so they are dimmed and labelled rather than left
@@ -216,6 +265,20 @@ export default function App() {
           }}
         >
         <StepLabel step={1} title="ข้อมูลสินเชื่อ" className="mt-8" />
+        {/* Shared by both columns so they are compared over the same calendar
+            periods; each period's day count follows from this date. */}
+        <label className="panel mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+          <span className="ink text-sm font-medium">วันชำระงวดถัดไป</span>
+          <input
+            type="date"
+            className="field px-3 py-2"
+            value={nextPaymentDate}
+            onChange={(event) => setNextPaymentDate(event.target.value)}
+          />
+          <span className="ink-muted text-xs">
+            ดูได้จากใบแจ้งหนี้ ใช้คิดจำนวนวันของแต่ละงวด และใช้กับทั้งสองคอลัมน์
+          </span>
+        </label>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <LoanForm
             title="สินเชื่อปัจจุบัน"
@@ -339,11 +402,18 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <ScheduleTable schedule={comparison.current} title="ตารางผ่อน — ปัจจุบัน" />
+            {/* One per row: with date, day count and the payment split, the
+                table no longer fits half the page width. */}
+            <div className="mt-4 grid gap-4">
+              <ScheduleTable
+                schedule={comparison.current}
+                title="ตารางผ่อน — ปัจจุบัน"
+                accentColor={chartTheme(scheme).loan.current}
+              />
               <ScheduleTable
                 schedule={comparison.alternative}
                 title="ตารางผ่อน — ทางเลือกใหม่"
+                accentColor={chartTheme(scheme).loan.alternative}
               />
             </div>
           </>

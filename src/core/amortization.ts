@@ -1,7 +1,7 @@
 import {
   accrueInterest,
   annuityPayment,
-  daysInPeriod,
+  daysBetween,
   paymentDate,
   rateForMonth,
 } from './interest'
@@ -41,7 +41,13 @@ export function buildSchedule(terms: LoanTerms): Schedule {
     terms.monthlyPayment ??
     annuityPayment(principal, rateForMonth(rateTiers, 1), termMonths)
 
-  const startDate = terms.startDate ?? new Date()
+  // Every due date is measured from one anchor so the day of the month never
+  // drifts: a loan billed on the 31st returns to the 31st after February's
+  // clamp to the 28th. With a first payment date the anchor is that date
+  // itself; otherwise it is the start date, one month before the first.
+  const anchor = terms.firstPaymentDate ?? terms.startDate ?? new Date()
+  const firstOffset = terms.firstPaymentDate ? 0 : 1
+  const dueDate = (month: number) => paymentDate(anchor, month - 1 + firstOffset)
 
   const rows: ScheduleRow[] = []
   let balance = principal
@@ -52,7 +58,8 @@ export function buildSchedule(terms: LoanTerms): Schedule {
 
   for (let month = 1; month <= termMonths; month++) {
     const annualRatePercent = rateForMonth(rateTiers, month)
-    const days = daysInPeriod(paymentDate(startDate, month))
+    const date = dueDate(month)
+    const days = daysBetween(dueDate(month - 1), date)
     const interest = accrueInterest(balance, annualRatePercent, days)
 
     const scheduled = basePayment + extra
@@ -82,11 +89,15 @@ export function buildSchedule(terms: LoanTerms): Schedule {
 
     rows.push({
       month,
+      date,
       annualRatePercent,
       days,
       payment,
       interest,
       principal: principalPaid,
+      // The instalment is paid first; only what the payment exceeds it by is
+      // the extra. A final payment smaller than the instalment carries none.
+      extraPaid: Math.min(extra, Math.max(0, payment - basePayment)),
       balance,
     })
 

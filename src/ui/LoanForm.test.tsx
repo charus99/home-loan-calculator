@@ -33,13 +33,28 @@ describe('LoanForm amount fields', () => {
     expect(screen.getByLabelText(/ค่างวดต่อเดือน/)).toHaveValue('17,100')
   })
 
-  it('shows bare digits while the field has focus', async () => {
-    // Inserting separators mid-entry moves the caret under the typist.
+  it('does not rewrite the value when the field is entered', async () => {
     const user = userEvent.setup()
     renderForm()
 
     await user.click(screen.getByLabelText(/เงินต้นคงเหลือ/))
-    expect(screen.getByLabelText(/เงินต้นคงเหลือ/)).toHaveValue('2400000')
+    expect(screen.getByLabelText(/เงินต้นคงเหลือ/)).toHaveValue('2,400,000')
+  })
+
+  it('replaces the amount when tabbed into and typed over', async () => {
+    // Regression: rewriting the value on focus dropped the selection the
+    // browser makes on Tab, so typing appended — 17100 then 14800 became
+    // 1710014800.
+    const user = userEvent.setup()
+    const { onChange } = renderForm()
+
+    const field = screen.getByLabelText<HTMLInputElement>(/ค่างวดต่อเดือน/)
+    field.focus()
+    field.select()
+    await user.keyboard('14800')
+
+    expect(field).toHaveValue('14800')
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ monthlyPayment: 14_800 }))
   })
 
   it('accepts a figure pasted with commas', async () => {

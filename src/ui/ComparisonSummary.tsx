@@ -59,6 +59,21 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
           </p>
         ) : null}
 
+        {/* Total interest side by side, large: this is what each choice
+            costs over its whole life, and the gap between them is the saving. */}
+        <dl className="mt-6 grid gap-4 sm:grid-cols-2">
+          <InterestTotal
+            label="ดอกเบี้ยรวมทั้งสัญญา — ปัจจุบัน"
+            amount={current.totalInterest}
+            accentColor={loanColors.current}
+          />
+          <InterestTotal
+            label="ดอกเบี้ยรวมทั้งสัญญา — ทางเลือกใหม่"
+            amount={alternative.totalInterest}
+            accentColor={loanColors.alternative}
+          />
+        </dl>
+
         <dl className="mt-6 grid gap-6 sm:grid-cols-[1.4fr_1fr_1fr] sm:items-end">
           <div>
             <dt className="ink text-sm">ประหยัดสุทธิ</dt>
@@ -123,6 +138,30 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
         />
       </div>
     </section>
+  )
+}
+
+function InterestTotal({
+  label,
+  amount,
+  accentColor,
+}: {
+  label: string
+  amount: number
+  accentColor: string
+}) {
+  return (
+    <div className="rounded-xl bg-white/70 p-4 dark:bg-black/25">
+      <dt className="ink flex items-center gap-2 text-sm">
+        <span
+          aria-hidden="true"
+          className="inline-block h-2.5 w-2.5 rounded-full"
+          style={{ backgroundColor: accentColor }}
+        />
+        {label}
+      </dt>
+      <dd className="ink-strong mt-1 text-3xl font-bold tabular-nums">{formatBaht(amount)}</dd>
+    </div>
   )
 }
 

@@ -97,6 +97,68 @@ describe('buildSchedule', () => {
   })
 })
 
+describe('first payment date', () => {
+  const loan: LoanTerms = {
+    principal: 3_351_338.19,
+    rateTiers: [{ fromMonth: 1, annualRatePercent: 2.89 }],
+    termMonths: 480,
+    monthlyPayment: 14_800,
+    extraMonthlyPayment: 5_200,
+    firstPaymentDate: new Date(2026, 9, 24),
+  }
+
+  it('puts the first row on the date given', () => {
+    const { rows } = buildSchedule(loan)
+    expect(rows[0].date).toEqual(new Date(2026, 9, 24))
+    expect(rows[1].date).toEqual(new Date(2026, 10, 24))
+  })
+
+  it('accrues the first period from one month before that date', () => {
+    // 24 Sep → 24 Oct is 30 days.
+    const { rows } = buildSchedule(loan)
+    expect(rows[0].days).toBe(30)
+    expect(rows[0].interest).toBeCloseTo((3_351_338.19 * 0.0289 * 30) / 365, 6)
+  })
+
+  it('gives the same figures whatever day it is run', () => {
+    // Without a fixed date the schedule anchored on today and shifted daily.
+    const first = buildSchedule(loan)
+    const second = buildSchedule({ ...loan })
+    expect(second.totalInterest).toBe(first.totalInterest)
+  })
+
+  it('keeps a loan billed on the 31st on the 31st after February', () => {
+    const { rows } = buildSchedule({ ...loan, firstPaymentDate: new Date(2027, 0, 31) })
+    expect(rows[1].date).toEqual(new Date(2027, 1, 28))
+    expect(rows[2].date).toEqual(new Date(2027, 2, 31))
+    expect(rows[2].days).toBe(31)
+  })
+})
+
+describe('extra payment recorded per row', () => {
+  it('separates the extra from the instalment', () => {
+    const { rows } = buildSchedule({ ...flatLoan, monthlyPayment: 17_100, extraMonthlyPayment: 5_000 })
+    expect(rows[0].payment).toBeCloseTo(22_100, 6)
+    expect(rows[0].extraPaid).toBeCloseTo(5_000, 6)
+  })
+
+  it('records none when there is no extra payment', () => {
+    const { rows } = buildSchedule(flatLoan)
+    expect(rows.every((row) => row.extraPaid === 0)).toBe(true)
+  })
+
+  it('counts only what a short final payment exceeds the instalment by as extra', () => {
+    const { rows } = buildSchedule({ ...flatLoan, extraMonthlyPayment: 500_000 })
+    const instalment = rows[0].payment - 500_000
+    const last = rows[rows.length - 1]
+
+    // The last payment clears a small remainder, well short of instalment
+    // plus extra, so it must not be reported as carrying the full 500,000.
+    expect(last.payment).toBeLessThan(instalment + 500_000)
+    expect(last.extraPaid).toBeCloseTo(Math.max(0, last.payment - instalment), 6)
+  })
+})
+
 describe('extra payments', () => {
   it('clears the loan early', () => {
     const withExtra = buildSchedule({ ...flatLoan, extraMonthlyPayment: 5_000 })

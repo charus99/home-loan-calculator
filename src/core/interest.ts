@@ -80,19 +80,22 @@ export function validateRateTiers(tiers: RateTier[]): string[] {
 }
 
 /**
- * The number of days in the billing period that ends on the given payment date.
+ * Whole days from one payment date to the next.
  *
- * Interest is accrued on real calendar days, so a payment falling in March
- * covers 31 days while one in February covers 28. Over a year these add up to
- * 365 (or 366 in a leap year), which is what makes the schedule agree with the
+ * Interest accrues on real calendar days, so a period ending in March covers
+ * 28 or 29 days while one ending in April covers 31. Over twelve periods these
+ * add up to the year's length, which is what makes the schedule agree with the
  * instalment the annuity formula produces.
+ *
+ * Takes both ends rather than stepping back a month from the end date:
+ * stepping back from 31 March lands on 3 March, not on the 28 February the
+ * previous instalment actually fell on, and undercounts the period by three
+ * days.
  */
-export function daysInPeriod(periodEnd: Date): number {
-  const periodStart = new Date(periodEnd)
-  periodStart.setMonth(periodStart.getMonth() - 1)
-
+export function daysBetween(from: Date, to: Date): number {
   const millisecondsPerDay = 24 * 60 * 60 * 1000
-  return Math.round((periodEnd.getTime() - periodStart.getTime()) / millisecondsPerDay)
+  // Rounded because a date-only value can carry a clock-change hour.
+  return Math.round((to.getTime() - from.getTime()) / millisecondsPerDay)
 }
 
 /**

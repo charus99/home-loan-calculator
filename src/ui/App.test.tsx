@@ -198,6 +198,39 @@ describe('App', () => {
     expect(within(alert).getByText(/ต้องกรอกค่างวดต่อเดือน/)).toBeInTheDocument()
   })
 
+  it('dates the schedule from the next payment date entered', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const dateInput = screen.getByLabelText(/วันชำระงวดถัดไป/)
+    await user.clear(dateInput)
+    await user.type(dateInput, '2027-03-31')
+    await user.click(calculateButton())
+
+    // First row of the current loan's table falls on that date, in the
+    // Buddhist-calendar form a Thai statement prints.
+    const [firstTable] = screen.getAllByRole('table')
+    const firstRow = within(firstTable).getAllByRole('row')[1]
+    expect(firstRow).toHaveTextContent('31 มี.ค. 70')
+  })
+
+  it('refuses to calculate without a payment date', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.clear(screen.getByLabelText(/วันชำระงวดถัดไป/))
+    await user.click(calculateButton())
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText(/ต้องกรอกวันชำระงวดถัดไป/)).toBeInTheDocument()
+  })
+
+  it('shows each loan’s total interest in the verdict', () => {
+    render(<App />)
+    expect(screen.getByText(/ดอกเบี้ยรวมทั้งสัญญา — ปัจจุบัน/)).toBeInTheDocument()
+    expect(screen.getByText(/ดอกเบี้ยรวมทั้งสัญญา — ทางเลือกใหม่/)).toBeInTheDocument()
+  })
+
   it('states that the figures are not official', () => {
     render(<App />)
     expect(screen.getByText(/ยังไม่ได้เทียบกับตารางผ่อนจริงของธนาคาร/)).toBeInTheDocument()

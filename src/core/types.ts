@@ -34,9 +34,19 @@ export interface LoanTerms {
    */
   termMonths: number
   /**
-   * Date the schedule starts from, used to count the real days in each month.
-   * Defaults to today when omitted, which is fine for comparing options but
-   * means the figures shift from day to day.
+   * Due date of the next instalment — the first row of this schedule.
+   *
+   * The balance entered is what is owed after the last payment, so the first
+   * period runs from one month before this date up to it. Every later
+   * instalment falls on the same day of the month, rolling back to the last
+   * day of shorter months. Takes precedence over startDate.
+   */
+  firstPaymentDate?: Date
+  /**
+   * Date the schedule starts from, with the first instalment one month later.
+   * Used when firstPaymentDate is absent. Defaults to today, which makes the
+   * figures shift from day to day, so callers showing results to a person
+   * should pass firstPaymentDate instead.
    */
   startDate?: Date
   /**
@@ -53,6 +63,8 @@ export interface LoanTerms {
 export interface ScheduleRow {
   /** 1-based month number. */
   month: number
+  /** The date this instalment falls due. */
+  date: Date
   /** Annual rate applied to this month, as a percentage. */
   annualRatePercent: number
   /** Days used to accrue interest for this month. */
@@ -61,8 +73,10 @@ export interface ScheduleRow {
   payment: number
   /** Portion of the payment consumed by interest. */
   interest: number
-  /** Portion of the payment that reduced the principal. */
+  /** Portion of the payment that reduced the principal, extra payment included. */
   principal: number
+  /** How much of this month's payment was the extra payment on top of the instalment. */
+  extraPaid: number
   /** Principal still owed after this month's payment. */
   balance: number
 }
