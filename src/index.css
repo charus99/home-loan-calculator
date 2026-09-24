@@ -3,8 +3,16 @@
 /* Dark styling keys off one attribute rather than the media query, because the
    viewer can override the system setting. useThemePreference resolves
    'system' against prefers-color-scheme and writes the result here, so there
-   is a single source of truth for both the stylesheet and the chart colours. */
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+   is a single source of truth for both the stylesheet and the chart colours.
+   Screen only: paper is white whatever the viewer's theme, and dark styling
+   printed there would leave light text on a white page. */
+@custom-variant dark {
+  @media screen {
+    &:where([data-theme='dark'], [data-theme='dark'] *) {
+      @slot;
+    }
+  }
+}
 
 /* Thai text needs a bit more line height than Latin defaults to keep
    tone marks and vowels above the line legible. */
@@ -27,8 +35,38 @@ html[data-theme='light'] {
   color-scheme: light;
 }
 
-html[data-theme='dark'] {
-  color-scheme: dark;
+@media screen {
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+}
+
+/* Saved as PDF through the browser's print dialog. Backgrounds are printed
+   because the header, the verdict card and the lump-sum rows carry meaning in
+   their colour, and browsers drop backgrounds by default. Buttons are hidden
+   wholesale: none of them does anything on paper. */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  * {
+    print-color-adjust: exact;
+  }
+
+  body {
+    background: white;
+  }
+
+  button {
+    display: none !important;
+  }
+
+  tr,
+  section {
+    break-inside: avoid;
+  }
 }
 
 body {

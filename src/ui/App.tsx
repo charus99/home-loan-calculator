@@ -11,7 +11,7 @@ import { LoanForm } from './LoanForm'
 import { NumberField } from './NumberField'
 import { ScheduleTable } from './ScheduleTable'
 import { chartTheme } from './chartTheme'
-import { formatBaht, roundToSatang } from './format'
+import { formatBaht, formatThaiDate, roundToSatang } from './format'
 import { ThemeProvider } from './ThemeContext'
 import { StepLabel } from './StepLabel'
 import { ThemeToggle } from './ThemeToggle'
@@ -308,8 +308,8 @@ export default function App() {
 
   return (
     <ThemeProvider value={scheme}>
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <main className="mx-auto max-w-5xl px-4 py-10">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 print:bg-white">
+      <main className="mx-auto max-w-5xl px-4 py-10 print:p-0">
         {/* White text on blue-700 → indigo-600 measures above 6:1 at both
             ends of the gradient; the dark variant keeps the same hue family
             but drops the brightness so it does not glare against the page. */}
@@ -328,7 +328,13 @@ export default function App() {
               </p>
             </div>
           </div>
-          <ThemeToggle preference={preference} onChange={setPreference} tone="onColor" />
+          <div className="print:hidden">
+            <ThemeToggle preference={preference} onChange={setPreference} tone="onColor" />
+          </div>
+          {/* Paper outlives the page: say when these figures were produced. */}
+          <p className="hidden text-sm text-white/85 print:block">
+            พิมพ์เมื่อ {formatThaiDate(new Date())}
+          </p>
         </header>
 
         <form
@@ -357,7 +363,8 @@ export default function App() {
             ดูได้จากใบแจ้งหนี้ ใช้คิดจำนวนวันของแต่ละงวด และใช้กับทั้งสองคอลัมน์
           </span>
         </label>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        {/* Side by side on paper too, which is narrower than the md breakpoint. */}
+        <div className="mt-4 grid gap-4 md:grid-cols-2 print:grid-cols-2">
           <LoanForm
             title="สินเชื่อปัจจุบัน"
             hint="กรอกยอดคงเหลือ ค่างวด และอัตราที่จ่ายอยู่ตอนนี้"
@@ -448,13 +455,26 @@ export default function App() {
         {/* Sticky, because the button sits below the costs form: without it a
             visitor editing the loan fields at the top cannot see it, just as
             their payoff figures disappear. */}
-        <div className="panel sticky bottom-4 z-10 mt-6 flex flex-wrap items-center gap-4 p-4 shadow-lg">
+        <div className="panel sticky bottom-4 z-10 mt-6 flex flex-wrap items-center gap-4 p-4 shadow-lg print:hidden">
           <button
             type="submit"
             className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
             disabled={!isStale}
           >
             คำนวณ
+          </button>
+          <button
+            type="button"
+            // The browser's print dialog, where "Save as PDF" is a destination.
+            // It renders Thai exactly as the page does, which a JavaScript PDF
+            // library would need an embedded font and shaping fixes to match.
+            onClick={() => window.print()}
+            // Results that are stale or missing would go on paper looking
+            // like an answer.
+            disabled={isStale || !comparison || comparison instanceof Error}
+            className="field ink rounded-lg px-4 py-3 font-medium hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-slate-800"
+          >
+            บันทึกเป็น PDF
           </button>
           <p role="status" className="ink-muted text-sm">
             {isStale ? (
@@ -515,7 +535,8 @@ export default function App() {
               <ComparisonSummary comparison={comparison} />
             </div>
 
-            <div className="mt-4 space-y-4">
+            {/* Left off paper: the verdict and the schedules carry the figures. */}
+            <div className="mt-4 space-y-4 print:hidden">
               <BalanceChart
                 current={comparison.current}
                 alternative={comparison.alternative}

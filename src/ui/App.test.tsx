@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 const calculateButton = () => screen.getByRole('button', { name: 'คำนวณ' })
@@ -330,6 +330,41 @@ describe('App', () => {
 
       const alert = await screen.findByRole('alert')
       expect(within(alert).getByText(/ต้องไม่ก่อนงวดที่กำลังผ่อนอยู่/)).toBeInTheDocument()
+    })
+  })
+
+  describe('save as PDF', () => {
+    const pdfButton = () => screen.getByRole('button', { name: 'บันทึกเป็น PDF' })
+
+    it('opens the print dialog, where the PDF is saved', async () => {
+      const user = userEvent.setup()
+      const print = vi.spyOn(window, 'print').mockImplementation(() => {})
+      render(<App />)
+
+      await user.click(pdfButton())
+      expect(print).toHaveBeenCalledOnce()
+      print.mockRestore()
+    })
+
+    it('is unavailable while the results are out of date', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      const [currentPayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
+      await user.type(currentPayment, '5')
+      expect(pdfButton()).toBeDisabled()
+
+      await user.click(calculateButton())
+      expect(pdfButton()).toBeEnabled()
+    })
+
+    it('puts every instalment in the page, not only the rows shown', () => {
+      render(<App />)
+
+      const [firstTable] = screen.getAllByRole('table')
+      const months = within(firstTable).getAllByRole('row').length - 1
+      const payoff = monthsFrom(screen.getAllByText(/หมดหนี้ใน/)[0].textContent ?? '')
+      expect(months).toBe(payoff)
     })
   })
 

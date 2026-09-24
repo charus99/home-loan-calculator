@@ -27,7 +27,6 @@ const INITIAL_ROWS = 12
  */
 export function ScheduleTable({ schedule, title, accentColor }: ScheduleTableProps) {
   const [expanded, setExpanded] = useState(false)
-  const rows = expanded ? schedule.rows : schedule.rows.slice(0, INITIAL_ROWS)
   const colors = chartTheme(useTheme()).paymentSplit
   // Named above the table because the lump often lands past the rows shown
   // before the table is expanded.
@@ -37,7 +36,10 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
     // min-w-0: as a grid item this would otherwise grow to the table's full
     // width and push the page sideways on a phone, instead of letting the
     // table scroll inside its own box.
-    <section className="panel min-w-0 p-5">
+    // On paper each table starts a page, so a schedule is not split around
+    // the end of the one before it.
+    <section className="panel min-w-0 p-5 print:break-before-page">
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="ink-strong flex items-center gap-2 font-semibold">
           <span
@@ -56,7 +58,10 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
       <LumpSumNote rows={lumpRows} />
 
       <div className="mt-3 overflow-x-auto">
-        <table className="ink-strong w-full min-w-[46rem] text-right text-sm tabular-nums">
+        {/* Paper cannot scroll sideways, so the table gives up its minimum
+            width there and shrinks its type to fit A4. Rows are packed
+            tighter too: every instalment prints, which runs to pages. */}
+        <table className="ink-strong w-full min-w-[46rem] text-right text-sm tabular-nums print:min-w-0 print:text-xs print:[&_td]:py-0.5 print:[&_th]:py-0.5">
           <thead>
             <tr className="hairline ink border-b">
               <th scope="col" className="py-2 pr-3 text-left font-medium">งวด</th>
@@ -70,12 +75,16 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {schedule.rows.map((row, index) => (
               <tr
                 key={row.month}
                 className={`border-b border-slate-100 align-top last:border-0 dark:border-slate-800 ${
                   // The month a lump sum lands is the one worth finding.
                   row.lumpPaid > 0 ? 'bg-amber-50 dark:bg-amber-950/40' : ''
+                } ${
+                  // Collapsed rows are hidden rather than left out, so a
+                  // printed schedule is complete without expanding it first.
+                  !expanded && index >= INITIAL_ROWS ? 'hidden print:table-row' : ''
                 }`}
               >
                 <th scope="row" className="ink py-2 pr-3 text-left font-normal">
@@ -175,7 +184,9 @@ function SplitBar({
   return (
     <span
       aria-hidden="true"
-      className="mt-1 ml-auto flex h-1.5 w-24 gap-px overflow-hidden rounded-full"
+      // Dropped on paper, where it would double each row's height for a
+      // proportion the two amount columns already give.
+      className="mt-1 ml-auto flex h-1.5 w-24 gap-px overflow-hidden rounded-full print:hidden"
     >
       <span style={{ width: `${interestShare * 100}%`, backgroundColor: colors.interest }} />
       <span style={{ flex: 1, backgroundColor: colors.principal }} />
