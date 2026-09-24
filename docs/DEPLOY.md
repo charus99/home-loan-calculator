@@ -96,12 +96,28 @@ Cloudflare สร้าง DNS record และออกใบรับรอง
 
 ### ถ้าแอปอื่นไม่ได้อยู่บน Cloudflare
 
-ตั้ง DNS record เองที่ Cloudflare → **DNS** → **Add record**
+**อย่าเพิ่ม nameserver ของเจ้าอื่น** — nameserver ของโดเมนต้องมาจากผู้ให้บริการ
+เจ้าเดียว ถ้าปนกัน แต่ละเจ้าตอบ DNS ไม่ตรงกัน เว็บจะเข้าได้บ้างไม่ได้บ้าง
+ให้ Cloudflare เป็นเจ้าของ DNS ต่อไป แล้วเพิ่ม record ชี้ subdomain ไปที่อื่นแทน
 
-| ปลายทาง | ประเภท | ค่า |
-|---|---|---|
-| Vercel | CNAME | `cname.vercel-dns.com` |
-| VPS / server ที่มี IP | A | IP ของเครื่อง |
+ตั้งที่ Cloudflare → `charus.xyz` → **DNS** → **Add record**
+
+| ปลายทาง | ประเภท | Name | ค่า |
+|---|---|---|---|
+| Vercel (subdomain) | CNAME | เช่น `app2` | **ค่าที่ Vercel แสดง** ในหน้า Settings → Domains ของโปรเจกต์นั้น |
+| Vercel (โดเมนหลัก `charus.xyz`) | A | `@` | ค่าที่ Vercel แสดง (ณ 2026-09 เอกสารระบุ `76.76.21.21`) |
+| VPS / server ที่มี IP | A | เช่น `api` | IP ของเครื่อง |
+
+**ค่า CNAME ของ Vercel เป็นค่าเฉพาะแต่ละโปรเจกต์** หน้าตาประมาณ
+`d1d4fc829fe7bc7c.vercel-dns-017.com` ไม่ใช่ `cname.vercel-dns.com` แบบที่เอกสาร
+รุ่นเก่าเขียนไว้ ให้ก๊อปจากหน้า Domains ของ Vercel เสมอ
+
+**ตั้ง Proxy status เป็น DNS only (เมฆสีเทา)** สำหรับ record ที่ชี้ไป Vercel
+ถ้าเปิดเมฆสีส้ม ทราฟฟิกจะผ่าน Cloudflare ก่อนถึง Vercel ซึ่งทำให้ Vercel ตรวจโดเมน
+และออก SSL ได้ยาก และมี cache ซ้อนสองชั้น
+
+ขั้นตอนฝั่ง Vercel: โปรเจกต์ → **Settings** → **Domains** → **Add Domain** → ใส่
+`app2.charus.xyz` → Vercel จะแสดง record ที่ต้องไปเพิ่มใน Cloudflare
 
 ---
 
