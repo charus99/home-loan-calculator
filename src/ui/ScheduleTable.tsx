@@ -29,6 +29,9 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
   const [expanded, setExpanded] = useState(false)
   const rows = expanded ? schedule.rows : schedule.rows.slice(0, INITIAL_ROWS)
   const colors = chartTheme(useTheme()).paymentSplit
+  // Named above the table because the lump often lands past the rows shown
+  // before the table is expanded.
+  const lumpRows = schedule.rows.filter((row) => row.lumpPaid > 0)
 
   return (
     // min-w-0: as a grid item this would otherwise grow to the table's full
@@ -50,6 +53,13 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
         </p>
       </div>
 
+      {lumpRows.map((row) => (
+        <p key={row.month} className="mt-2 text-sm text-amber-700 dark:text-amber-300">
+          โปะเงินก้อน {formatBahtPrecise(row.lumpPaid)} ในงวดที่ {row.month} (
+          {formatThaiDate(row.date)})
+        </p>
+      ))}
+
       <div className="mt-3 overflow-x-auto">
         <table className="ink-strong w-full min-w-[46rem] text-right text-sm tabular-nums">
           <thead>
@@ -68,7 +78,10 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
             {rows.map((row) => (
               <tr
                 key={row.month}
-                className="border-b border-slate-100 align-top last:border-0 dark:border-slate-800"
+                className={`border-b border-slate-100 align-top last:border-0 dark:border-slate-800 ${
+                  // The month a lump sum lands is the one worth finding.
+                  row.lumpPaid > 0 ? 'bg-amber-50 dark:bg-amber-950/40' : ''
+                }`}
               >
                 <th scope="row" className="ink py-2 pr-3 text-left font-normal">
                   {row.month}
@@ -88,6 +101,11 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
                   {row.extraPaid > 0 ? (
                     <span className="ink-muted block text-xs">
                       รวมโปะ {formatBahtPrecise(row.extraPaid)}
+                    </span>
+                  ) : null}
+                  {row.lumpPaid > 0 ? (
+                    <span className="block text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      รวมโปะก้อน {formatBahtPrecise(row.lumpPaid)}
                     </span>
                   ) : null}
                 </td>

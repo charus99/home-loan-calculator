@@ -57,6 +57,19 @@ export interface LoanTerms {
   monthlyPayment?: number
   /** Extra principal paid every month on top of the instalment. */
   extraMonthlyPayment?: number
+  /**
+   * One-off payments towards principal, such as a year-end bonus.
+   *
+   * Each is applied with the instalment due on or after its date. The
+   * instalment itself stays the same, so the loan clears sooner.
+   */
+  lumpSums?: LumpSum[]
+}
+
+/** A single extra payment made on a given date. */
+export interface LumpSum {
+  date: Date
+  amount: number
 }
 
 /** One row of the amortization schedule. */
@@ -77,6 +90,8 @@ export interface ScheduleRow {
   principal: number
   /** How much of this month's payment was the extra payment on top of the instalment. */
   extraPaid: number
+  /** How much of this month's payment was a one-off lump sum. */
+  lumpPaid: number
   /** Principal still owed after this month's payment. */
   balance: number
 }

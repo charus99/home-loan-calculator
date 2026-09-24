@@ -231,6 +231,73 @@ describe('App', () => {
     expect(screen.getByText(/ดอกเบี้ยรวมทั้งสัญญา — ทางเลือกใหม่/)).toBeInTheDocument()
   })
 
+  describe('lump sum', () => {
+    async function enterLumpSum(user: ReturnType<typeof userEvent.setup>, amount: string, date: string) {
+      const amountField = screen.getByLabelText(/ยอดโปะ/)
+      await user.clear(amountField)
+      await user.type(amountField, amount)
+      const dateField = screen.getByLabelText(/วันที่โปะ/)
+      await user.clear(dateField)
+      if (date) {
+        await user.type(dateField, date)
+      }
+    }
+
+    it('shortens both loans by the same money', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      const payoffs = () => screen.getAllByText(/หมดหนี้ใน/).map((el) => monthsFrom(el.textContent ?? ''))
+      const [currentBefore, alternativeBefore] = payoffs()
+
+      await user.clear(screen.getByLabelText(/วันชำระงวดถัดไป/))
+      await user.type(screen.getByLabelText(/วันชำระงวดถัดไป/), '2026-10-24')
+      await enterLumpSum(user, '100000', '2026-12-31')
+      await user.click(calculateButton())
+
+      const [currentAfter, alternativeAfter] = payoffs()
+      expect(currentAfter).toBeLessThan(currentBefore)
+      expect(alternativeAfter).toBeLessThan(alternativeBefore)
+    })
+
+    it('names the instalment the lump sum lands in', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      await user.clear(screen.getByLabelText(/วันชำระงวดถัดไป/))
+      await user.type(screen.getByLabelText(/วันชำระงวดถัดไป/), '2026-10-24')
+      await enterLumpSum(user, '100000', '2026-12-31')
+      await user.click(calculateButton())
+
+      // 31 Dec falls after the 24 Dec instalment, so it goes with 24 Jan.
+      expect(screen.getAllByText(/ในงวดที่ 4 \(24 ม\.ค\. 70\)/)).toHaveLength(2)
+    })
+
+    it('asks for a date once an amount is entered', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      await enterLumpSum(user, '100000', '')
+      await user.click(calculateButton())
+
+      const alert = await screen.findByRole('alert')
+      expect(within(alert).getByText(/ต้องกรอกวันที่โปะด้วย/)).toBeInTheDocument()
+    })
+
+    it('refuses a date before the current period, which the balance already reflects', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      await user.clear(screen.getByLabelText(/วันชำระงวดถัดไป/))
+      await user.type(screen.getByLabelText(/วันชำระงวดถัดไป/), '2026-10-24')
+      await enterLumpSum(user, '100000', '2026-08-01')
+      await user.click(calculateButton())
+
+      const alert = await screen.findByRole('alert')
+      expect(within(alert).getByText(/ต้องไม่ก่อนงวดที่กำลังผ่อนอยู่/)).toBeInTheDocument()
+    })
+  })
+
   it('states that the figures are not official', () => {
     render(<App />)
     expect(screen.getByText(/ยังไม่ได้เทียบกับตารางผ่อนจริงของธนาคาร/)).toBeInTheDocument()

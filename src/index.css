@@ -15,6 +15,13 @@
   --font-sans: 'IBM Plex Sans Thai', 'Leelawadee UI', system-ui, 'Segoe UI', sans-serif;
 }
 
+/* The sticky calculate bar covers the bottom of the viewport. Reserving its
+   height here makes the browser stop short of it when it scrolls a focused
+   field into view, so the field being typed in is never hidden behind it. */
+html {
+  scroll-padding-bottom: 7rem;
+}
+
 /* Tells the browser which palette to use for form controls and scrollbars. */
 html[data-theme='light'] {
   color-scheme: light;

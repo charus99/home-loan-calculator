@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react'
 import { compareRefinance } from '../core/refinance'
 import { annuityPayment, paymentDate, validateRateTiers } from '../core/interest'
-import type { LoanTerms, RefinanceCosts } from '../core/types'
+import type { LoanTerms, LumpSum, RefinanceCosts } from '../core/types'
 import { BalanceChart } from './charts/BalanceChart'
 import { BreakEvenChart } from './charts/BreakEvenChart'
 import { PaymentSplitChart } from './charts/PaymentSplitChart'
 import { ComparisonSummary } from './ComparisonSummary'
 import { CostsForm } from './CostsForm'
 import { LoanForm } from './LoanForm'
+import { NumberField } from './NumberField'
 import { ScheduleTable } from './ScheduleTable'
 import { chartTheme } from './chartTheme'
 import { formatBaht, roundToSatang } from './format'
@@ -104,7 +105,17 @@ interface CalculationInputs {
   costs: RefinanceCosts
   /** Due date of the next instalment, as the date input gives it: YYYY-MM-DD. */
   nextPaymentDate: string
+  /** A one-off payment applied to both loans alike. An amount of 0 means none. */
+  lumpSum: StoredLumpSum
 }
+
+interface StoredLumpSum {
+  amount: number
+  /** YYYY-MM-DD, or empty when not set. */
+  date: string
+}
+
+const NO_LUMP_SUM: StoredLumpSum = { amount: 0, date: '' }
 
 /**
  * Reads a YYYY-MM-DD value as a local calendar date.
@@ -136,6 +147,7 @@ function runComparison({
   alternativeLoan: alternativeInput,
   costs,
   nextPaymentDate,
+  lumpSum,
 }: CalculationInputs) {
   const problems = [
     ...validateRateTiers(currentInput.rateTiers).map((p) => `สินเชื่อปัจจุบัน: ${p}`),
@@ -147,10 +159,25 @@ function runComparison({
     problems.push('ต้องกรอกวันชำระงวดถัดไป')
   }
 
-  // Both loans are measured from the same due date, so they are compared
-  // over identical calendar periods.
-  const currentLoan = { ...currentInput, firstPaymentDate: firstPaymentDate ?? undefined }
-  const alternativeLoan = { ...alternativeInput, firstPaymentDate: firstPaymentDate ?? undefined }
+  const lumpSums: LumpSum[] = []
+  if (lumpSum.amount > 0) {
+    const paidOn = parseLocalDate(lumpSum.date)
+    if (!paidOn) {
+      problems.push('ใส่ยอดโปะเงินก้อนแล้ว ต้องกรอกวันที่โปะด้วย')
+    } else if (firstPaymentDate && paidOn < paymentDate(firstPaymentDate, -1)) {
+      // Before the period now running, so the balance entered already
+      // reflects it — counting it again would credit the payment twice.
+      problems.push('วันที่โปะเงินก้อนต้องไม่ก่อนงวดที่กำลังผ่อนอยู่')
+    } else {
+      lumpSums.push({ date: paidOn, amount: lumpSum.amount })
+    }
+  }
+
+  // Both loans are measured from the same due date and receive the same lump
+  // sum, so the comparison isolates the difference the rate makes.
+  const shared = { firstPaymentDate: firstPaymentDate ?? undefined, lumpSums }
+  const currentLoan = { ...currentInput, ...shared }
+  const alternativeLoan = { ...alternativeInput, ...shared }
 
   // Without an instalment there is nothing to compare, and the schedule would
   // silently fall back to an annuity over the 40-year ceiling.
@@ -210,14 +237,23 @@ export default function App() {
   // Results come from the inputs as they stood at the last press of the
   // calculate button, not from what is being typed. Opening the page counts as
   // a press, so a returning visitor sees their figures straight away.
+  const [lumpSum, setLumpSum] = useStoredState('home-loan:lump-sum', NO_LUMP_SUM)
+
   const [calculated, setCalculated] = useState<CalculationInputs>(() => ({
     currentLoan,
     alternativeLoan,
     costs,
     nextPaymentDate,
+    lumpSum,
   }))
 
-  const pending: CalculationInputs = { currentLoan, alternativeLoan, costs, nextPaymentDate }
+  const pending: CalculationInputs = {
+    currentLoan,
+    alternativeLoan,
+    costs,
+    nextPaymentDate,
+    lumpSum,
+  }
 
   // Edited but not yet calculated. The results then describe other figures
   // than the ones on screen, so they are dimmed and labelled rather than left
@@ -308,6 +344,35 @@ export default function App() {
             }
           />
         </div>
+
+        {/* Shared by both columns, like the payment date: the same money
+            goes towards either loan, so only the rate decides the outcome. */}
+        <section className="panel mt-4 p-5">
+          <h2 className="ink-strong font-semibold">โปะเงินก้อน (ไม่บังคับ)</h2>
+          <p className="ink-muted mt-1 text-sm">
+            เช่น โบนัสสิ้นปี ใช้กับทั้งสองคอลัมน์ ค่างวดเท่าเดิม หนี้หมดเร็วขึ้น
+            ตัดเงินต้นพร้อมงวดที่ครบกำหนดตรงหรือหลังวันที่โปะ
+          </p>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <NumberField
+              label="ยอดโปะ"
+              suffix="บาท"
+              value={lumpSum.amount}
+              decimals={2}
+              onChange={(amount) => setLumpSum({ ...lumpSum, amount })}
+              help="ใส่ 0 ถ้าไม่โปะ"
+            />
+            <label className="block">
+              <span className="ink text-sm font-medium">วันที่โปะ</span>
+              <input
+                type="date"
+                className="field mt-1 block w-full px-3 py-2"
+                value={lumpSum.date}
+                onChange={(event) => setLumpSum({ ...lumpSum, date: event.target.value })}
+              />
+            </label>
+          </div>
+        </section>
 
         <StepLabel step={2} title="ค่าใช้จ่ายรีไฟแนนซ์" className="mt-8" />
         <div className="mt-4">

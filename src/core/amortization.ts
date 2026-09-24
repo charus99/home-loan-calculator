@@ -26,6 +26,7 @@ const SETTLED_THRESHOLD = 0.005
 export function buildSchedule(terms: LoanTerms): Schedule {
   const { principal, rateTiers, termMonths } = terms
   const extra = terms.extraMonthlyPayment ?? 0
+  const lumpSums = terms.lumpSums ?? []
 
   if (principal <= 0) {
     throw new Error('Principal must be greater than zero')
@@ -59,10 +60,20 @@ export function buildSchedule(terms: LoanTerms): Schedule {
   for (let month = 1; month <= termMonths; month++) {
     const annualRatePercent = rateForMonth(rateTiers, month)
     const date = dueDate(month)
-    const days = daysBetween(dueDate(month - 1), date)
+    const periodStart = dueDate(month - 1)
+    const days = daysBetween(periodStart, date)
     const interest = accrueInterest(balance, annualRatePercent, days)
 
-    const scheduled = basePayment + extra
+    // A lump sum joins the instalment due on or after its date. It is not
+    // credited on the day it is paid, so this period's interest is charged on
+    // the balance before it — slightly understating the saving rather than
+    // overstating it. The first row also takes anything dated earlier; the
+    // form rejects dates before the current period.
+    const lump = lumpSums
+      .filter(({ date: paidOn }) => paidOn <= date && (month === 1 || paidOn > periodStart))
+      .reduce((sum, { amount }) => sum + amount, 0)
+
+    const scheduled = basePayment + extra + lump
     const payoffAmount = balance + interest
     const isFinalMonth = month === termMonths
 
@@ -95,9 +106,11 @@ export function buildSchedule(terms: LoanTerms): Schedule {
       payment,
       interest,
       principal: principalPaid,
-      // The instalment is paid first; only what the payment exceeds it by is
-      // the extra. A final payment smaller than the instalment carries none.
+      // Allocated in order — instalment, then the monthly extra, then any lump
+      // sum — so a final payment that falls short of the full amount is
+      // described by what it actually covered.
       extraPaid: Math.min(extra, Math.max(0, payment - basePayment)),
+      lumpPaid: Math.min(lump, Math.max(0, payment - basePayment - extra)),
       balance,
     })
 

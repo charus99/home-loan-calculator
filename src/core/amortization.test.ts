@@ -135,6 +135,77 @@ describe('first payment date', () => {
   })
 })
 
+describe('lump sums', () => {
+  // Billed on the 24th, starting 24 October 2026.
+  const loan: LoanTerms = {
+    principal: 3_351_338.19,
+    rateTiers: [{ fromMonth: 1, annualRatePercent: 2.89 }],
+    termMonths: 480,
+    monthlyPayment: 14_800,
+    extraMonthlyPayment: 5_200,
+    firstPaymentDate: new Date(2026, 9, 24),
+  }
+  const bonus = { date: new Date(2026, 11, 31), amount: 100_000 }
+
+  it('joins the instalment due on or after its date', () => {
+    // 31 Dec falls after the 24 Dec instalment, so it goes with 24 Jan.
+    const { rows } = buildSchedule({ ...loan, lumpSums: [bonus] })
+    const withLump = rows.filter((row) => row.lumpPaid > 0)
+
+    expect(withLump).toHaveLength(1)
+    expect(withLump[0].date).toEqual(new Date(2027, 0, 24))
+    expect(withLump[0].lumpPaid).toBeCloseTo(100_000, 6)
+    expect(withLump[0].payment).toBeCloseTo(120_000, 6)
+  })
+
+  it('counts a lump dated on a due date towards that instalment', () => {
+    const { rows } = buildSchedule({
+      ...loan,
+      lumpSums: [{ date: new Date(2026, 11, 24), amount: 100_000 }],
+    })
+    expect(rows.find((row) => row.lumpPaid > 0)?.date).toEqual(new Date(2026, 11, 24))
+  })
+
+  it('clears the loan sooner and saves interest, at the same instalment', () => {
+    const without = buildSchedule(loan)
+    const withBonus = buildSchedule({ ...loan, lumpSums: [bonus] })
+
+    expect(withBonus.monthsToPayoff).toBeLessThan(without.monthsToPayoff)
+    expect(withBonus.totalInterest).toBeLessThan(without.totalInterest)
+    // The regular instalment is unchanged in every month but the lump's.
+    expect(withBonus.rows[0].payment).toBeCloseTo(without.rows[0].payment, 6)
+  })
+
+  it('charges less interest from the month after the lump', () => {
+    const without = buildSchedule(loan)
+    const withBonus = buildSchedule({ ...loan, lumpSums: [bonus] })
+    const lumpIndex = withBonus.rows.findIndex((row) => row.lumpPaid > 0)
+
+    expect(withBonus.rows[lumpIndex].interest).toBeCloseTo(without.rows[lumpIndex].interest, 6)
+    expect(withBonus.rows[lumpIndex + 1].interest).toBeLessThan(
+      without.rows[lumpIndex + 1].interest,
+    )
+  })
+
+  it('takes no more than is owed when the lump exceeds the balance', () => {
+    const schedule = buildSchedule({
+      ...loan,
+      lumpSums: [{ date: new Date(2026, 9, 24), amount: 10_000_000 }],
+    })
+    expect(schedule.monthsToPayoff).toBe(1)
+    expect(schedule.rows[0].balance).toBe(0)
+    expect(schedule.rows[0].lumpPaid).toBeLessThan(10_000_000)
+  })
+
+  it('ignores a lump dated after the loan has already cleared', () => {
+    const schedule = buildSchedule({
+      ...loan,
+      lumpSums: [{ date: new Date(2080, 0, 1), amount: 100_000 }],
+    })
+    expect(schedule.rows.every((row) => row.lumpPaid === 0)).toBe(true)
+  })
+})
+
 describe('extra payment recorded per row', () => {
   it('separates the extra from the instalment', () => {
     const { rows } = buildSchedule({ ...flatLoan, monthlyPayment: 17_100, extraMonthlyPayment: 5_000 })
