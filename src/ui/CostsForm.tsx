@@ -52,7 +52,9 @@ export function CostsForm({ costs, onChange, loanAmount }: CostsFormProps) {
               className="field mt-1 w-full px-3 py-2 text-right"
               value={costs[key] ?? 0}
               min={0}
-              step={1_000}
+              // No step: fees such as a 1,200 baht stamp duty are not round
+              // thousands, and a step makes the browser treat them as invalid.
+              step="any"
               onChange={(event) => onChange({ ...costs, [key]: Number(event.target.value) })}
             />
             {key === 'mortgageRegistration' && costs[key] !== suggestedRegistration ? (

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { LoanTerms, RateTier } from '../core/types'
-import { formatBaht, formatDuration, formatRate } from './format'
+import { formatBaht, formatDuration } from './format'
 
 interface LoanFormProps {
   title: string
@@ -167,7 +167,7 @@ export function LoanForm({
 
       <p className="ink hairline mt-4 border-t pt-3 text-sm">
         {monthsToPayoff === undefined ? (
-          <span className="ink-muted">อัตราปัจจุบัน {formatRate(terms.rateTiers[0].annualRatePercent)}</span>
+          <span className="ink-muted">กดคำนวณเพื่อดูว่าหมดหนี้เมื่อไหร่</span>
         ) : (
           <>
             หมดหนี้ใน <strong className="ink-strong">{formatDuration(monthsToPayoff)}</strong>

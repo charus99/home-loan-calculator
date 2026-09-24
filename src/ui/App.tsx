@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { compareRefinance } from '../core/refinance'
 import { annuityPayment, validateRateTiers } from '../core/interest'
 import type { LoanTerms, RefinanceCosts } from '../core/types'
@@ -96,6 +96,53 @@ function reviveLoanTerms(fallback: LoanTerms) {
   }
 }
 
+interface CalculationInputs {
+  currentLoan: LoanTerms
+  alternativeLoan: LoanTerms
+  costs: RefinanceCosts
+}
+
+/** Validates a set of inputs and, if they are usable, compares the two loans. */
+function runComparison({ currentLoan, alternativeLoan, costs }: CalculationInputs) {
+  const problems = [
+    ...validateRateTiers(currentLoan.rateTiers).map((p) => `สินเชื่อปัจจุบัน: ${p}`),
+    ...validateRateTiers(alternativeLoan.rateTiers).map((p) => `ทางเลือกใหม่: ${p}`),
+  ]
+
+  // Without an instalment there is nothing to compare, and the schedule would
+  // silently fall back to an annuity over the 40-year ceiling.
+  if (!currentLoan.monthlyPayment || currentLoan.monthlyPayment <= 0) {
+    problems.push('สินเชื่อปัจจุบัน: ต้องกรอกค่างวดต่อเดือน')
+  }
+
+  if (problems.length > 0) {
+    return { problems, comparison: null }
+  }
+
+  // With no instalment of its own, the alternative is judged at the current
+  // loan's payment, so a lower rate shows up as clearing the debt sooner
+  // rather than as a smaller payment stretched over a longer term. A lender's
+  // quoted instalment, once entered, takes precedence.
+  const alternativeToCompare = {
+    ...alternativeLoan,
+    monthlyPayment: alternativeLoan.monthlyPayment ?? currentLoan.monthlyPayment,
+  }
+
+  try {
+    return {
+      problems,
+      comparison: compareRefinance(currentLoan, alternativeToCompare, costs),
+    }
+  } catch (error) {
+    // A schedule can refuse to build on inputs the tier check does not cover,
+    // such as a zero principal. Surfacing it beats rendering a blank page.
+    return {
+      problems,
+      comparison: error instanceof Error ? error : new Error('คำนวณไม่สำเร็จ'),
+    }
+  }
+}
+
 export default function App() {
   const { preference, scheme, setPreference } = useThemePreference()
 
@@ -111,45 +158,25 @@ export default function App() {
   )
   const [costs, setCosts] = useStoredState('home-loan:costs', DEFAULT_COSTS)
 
-  // With no instalment of its own, the alternative is judged at the current
-  // loan's payment, so a lower rate shows up as clearing the debt sooner
-  // rather than as a smaller payment stretched over a longer term. A lender's
-  // quoted instalment, once entered, takes precedence.
-  const alternativeToCompare = useMemo(
-    () => ({
-      ...alternativeLoan,
-      monthlyPayment: alternativeLoan.monthlyPayment ?? currentLoan.monthlyPayment,
-    }),
-    [alternativeLoan, currentLoan.monthlyPayment],
-  )
+  // Results come from the inputs as they stood at the last press of the
+  // calculate button, not from what is being typed. Opening the page counts as
+  // a press, so a returning visitor sees their figures straight away.
+  const [calculated, setCalculated] = useState<CalculationInputs>(() => ({
+    currentLoan,
+    alternativeLoan,
+    costs,
+  }))
 
-  const problems = useMemo(() => {
-    const found = [
-      ...validateRateTiers(currentLoan.rateTiers).map((p) => `สินเชื่อปัจจุบัน: ${p}`),
-      ...validateRateTiers(alternativeLoan.rateTiers).map((p) => `ทางเลือกใหม่: ${p}`),
-    ]
+  const pending: CalculationInputs = { currentLoan, alternativeLoan, costs }
 
-    // Without an instalment there is nothing to compare, and the schedule would
-    // silently fall back to an annuity over the 40-year ceiling.
-    if (!currentLoan.monthlyPayment || currentLoan.monthlyPayment <= 0) {
-      found.push('สินเชื่อปัจจุบัน: ต้องกรอกค่างวดต่อเดือน')
-    }
+  // Edited but not yet calculated. The results then describe other figures
+  // than the ones on screen, so they are dimmed and labelled rather than left
+  // looking current.
+  const isStale = JSON.stringify(pending) !== JSON.stringify(calculated)
 
-    return found
-  }, [currentLoan.rateTiers, currentLoan.monthlyPayment, alternativeLoan.rateTiers])
+  const calculate = () => setCalculated(pending)
 
-  const comparison = useMemo(() => {
-    if (problems.length > 0) {
-      return null
-    }
-    try {
-      return compareRefinance(currentLoan, alternativeToCompare, costs)
-    } catch (error) {
-      // A schedule can refuse to build on inputs the tier check does not cover,
-      // such as a zero principal. Surfacing it beats rendering a blank page.
-      return error instanceof Error ? error : new Error('คำนวณไม่สำเร็จ')
-    }
-  }, [currentLoan, alternativeToCompare, costs, problems])
+  const { problems, comparison } = useMemo(() => runComparison(calculated), [calculated])
 
   return (
     <ThemeProvider value={scheme}>
@@ -165,6 +192,17 @@ export default function App() {
           <ThemeToggle preference={preference} onChange={setPreference} />
         </header>
 
+        <form
+          // A form so that Enter in any field calculates, the way a borrower
+          // expects after typing a figure in. noValidate because the app checks
+          // the inputs itself and explains problems in Thai; the browser's own
+          // validation would otherwise block the submit silently first.
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault()
+            calculate()
+          }}
+        >
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <LoanForm
             title="สินเชื่อปัจจุบัน"
@@ -173,7 +211,9 @@ export default function App() {
             onChange={setCurrentLoan}
             paymentField="required"
             monthsToPayoff={
-              comparison instanceof Error ? undefined : comparison?.current.monthsToPayoff
+              isStale || comparison instanceof Error
+                ? undefined
+                : comparison?.current.monthsToPayoff
             }
           />
           <LoanForm
@@ -184,7 +224,9 @@ export default function App() {
             paymentField="optional"
             inheritedPayment={currentLoan.monthlyPayment}
             monthsToPayoff={
-              comparison instanceof Error ? undefined : comparison?.alternative.monthsToPayoff
+              isStale || comparison instanceof Error
+                ? undefined
+                : comparison?.alternative.monthsToPayoff
             }
           />
         </div>
@@ -193,6 +235,29 @@ export default function App() {
           <CostsForm costs={costs} onChange={setCosts} loanAmount={alternativeLoan.principal} />
         </div>
 
+        {/* Sticky, because the button sits below the costs form: without it a
+            visitor editing the loan fields at the top cannot see it, just as
+            their payoff figures disappear. */}
+        <div className="panel sticky bottom-4 z-10 mt-6 flex flex-wrap items-center gap-4 p-4 shadow-lg">
+          <button
+            type="submit"
+            className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+            disabled={!isStale}
+          >
+            คำนวณ
+          </button>
+          <p role="status" className="ink-muted text-sm">
+            {isStale
+              ? 'มีการแก้ตัวเลข กดคำนวณหรือกด Enter เพื่ออัปเดตผลลัพธ์'
+              : 'ผลลัพธ์ด้านล่างตรงกับตัวเลขที่กรอกแล้ว'}
+          </p>
+        </div>
+        </form>
+
+        <div
+          className={isStale ? 'pointer-events-none opacity-40 transition-opacity' : 'transition-opacity'}
+          aria-hidden={isStale}
+        >
         {problems.length > 0 ? (
           <div
             role="alert"
@@ -248,6 +313,7 @@ export default function App() {
             </div>
           </>
         ) : null}
+        </div>
 
         <footer className="hairline ink-muted mt-10 border-t pt-6 text-sm">
           <p>

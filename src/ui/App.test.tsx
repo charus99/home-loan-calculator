@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 
+const calculateButton = () => screen.getByRole('button', { name: 'คำนวณ' })
+
 /** Reads a month count out of a rendered duration such as "22 ปี 6 เดือน". */
 function monthsFrom(text: string): number {
   const years = Number(text.match(/(\d+)\s*ปี/)?.[1] ?? 0)
@@ -34,7 +36,7 @@ describe('App', () => {
     expect(screen.getByRole('heading', { name: 'คุ้มที่จะเปลี่ยน' })).toBeInTheDocument()
   })
 
-  it('recalculates when a rate changes', async () => {
+  it('recalculates when the button is pressed', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -46,8 +48,58 @@ describe('App', () => {
     const rateInputs = screen.getAllByLabelText('ช่วงที่ 1 อัตราดอกเบี้ย')
     await user.clear(rateInputs[1])
     await user.type(rateInputs[1], '6')
+    await user.click(calculateButton())
 
     expect(netSaving()).not.toBe(before)
+  })
+
+  it('leaves the results alone until the button is pressed', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const netSaving = () => screen.getByText('ประหยัดสุทธิ').nextElementSibling?.textContent
+    const before = netSaving()
+
+    const rateInputs = screen.getAllByLabelText('ช่วงที่ 1 อัตราดอกเบี้ย')
+    await user.clear(rateInputs[1])
+    await user.type(rateInputs[1], '6')
+
+    expect(netSaving()).toBe(before)
+  })
+
+  it('flags results as out of date after an edit, so they are not trusted', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(calculateButton()).toBeDisabled()
+
+    const [currentPayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
+    await user.type(currentPayment, '5')
+
+    expect(calculateButton()).toBeEnabled()
+    expect(screen.getByRole('status')).toHaveTextContent(/กดคำนวณ/)
+    // The payoff line under each form no longer quotes the stale figure.
+    expect(screen.queryAllByText(/หมดหนี้ใน/)).toHaveLength(0)
+
+    await user.click(calculateButton())
+
+    expect(calculateButton()).toBeDisabled()
+    expect(screen.getAllByText(/หมดหนี้ใน/)).toHaveLength(2)
+  })
+
+  it('calculates when Enter is pressed in a field', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    const netSaving = () => screen.getByText('ประหยัดสุทธิ').nextElementSibling?.textContent
+    const before = netSaving()
+
+    const rateInputs = screen.getAllByLabelText('ช่วงที่ 1 อัตราดอกเบี้ย')
+    await user.clear(rateInputs[1])
+    await user.type(rateInputs[1], '6{Enter}')
+
+    expect(netSaving()).not.toBe(before)
+    expect(calculateButton()).toBeDisabled()
   })
 
   it('warns instead of calculating when the rate tiers are invalid', async () => {
@@ -58,6 +110,7 @@ describe('App', () => {
     const tierMonthInputs = screen.getAllByLabelText('ช่วงที่ 2 เริ่มเดือนที่')
     await user.clear(tierMonthInputs[0])
     await user.type(tierMonthInputs[0], '0')
+    await user.click(calculateButton())
 
     const alert = await screen.findByRole('alert')
     expect(within(alert).getByText(/ตรวจสอบข้อมูลที่กรอก/)).toBeInTheDocument()
@@ -105,6 +158,7 @@ describe('App', () => {
     const [, alternativePayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
     await user.clear(alternativePayment)
     await user.type(alternativePayment, '14000')
+    await user.click(calculateButton())
 
     const after = monthsFrom(screen.getAllByText(/หมดหนี้ใน/)[1].textContent ?? '')
     expect(after).toBeGreaterThan(before)
@@ -138,6 +192,7 @@ describe('App', () => {
     // The current loan's field, which is the required one.
     const [currentPayment] = screen.getAllByLabelText(/ค่างวดต่อเดือน/)
     await user.clear(currentPayment)
+    await user.click(calculateButton())
 
     const alert = await screen.findByRole('alert')
     expect(within(alert).getByText(/ต้องกรอกค่างวดต่อเดือน/)).toBeInTheDocument()
