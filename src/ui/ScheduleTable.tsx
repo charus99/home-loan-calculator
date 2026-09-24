@@ -53,12 +53,7 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
         </p>
       </div>
 
-      {lumpRows.map((row) => (
-        <p key={row.month} className="mt-2 text-sm text-amber-700 dark:text-amber-300">
-          โปะเงินก้อน {formatBahtPrecise(row.lumpPaid)} ในงวดที่ {row.month} (
-          {formatThaiDate(row.date)})
-        </p>
-      ))}
+      <LumpSumNote rows={lumpRows} />
 
       <div className="mt-3 overflow-x-auto">
         <table className="ink-strong w-full min-w-[46rem] text-right text-sm tabular-nums">
@@ -126,6 +121,34 @@ export function ScheduleTable({ schedule, title, accentColor }: ScheduleTablePro
         </button>
       ) : null}
     </section>
+  )
+}
+
+/**
+ * Where the lump sums landed. A yearly lump would make one line per year, so
+ * several are summed up by count, total and first and last instalment.
+ */
+function LumpSumNote({ rows }: { rows: ScheduleRow[] }) {
+  if (rows.length === 0) {
+    return null
+  }
+  const className = 'mt-2 text-sm text-amber-700 dark:text-amber-300'
+  const at = (row: ScheduleRow) => `งวดที่ ${row.month} (${formatThaiDate(row.date)})`
+
+  if (rows.length === 1) {
+    const [row] = rows
+    return (
+      <p className={className}>
+        โปะเงินก้อน {formatBahtPrecise(row.lumpPaid)} ใน{at(row)}
+      </p>
+    )
+  }
+  const total = rows.reduce((sum, row) => sum + row.lumpPaid, 0)
+  return (
+    <p className={className}>
+      โปะเงินก้อน {rows.length} ครั้ง รวม {formatBahtPrecise(total)} — ครั้งแรก{at(rows[0])}{' '}
+      ครั้งสุดท้าย{at(rows[rows.length - 1])}
+    </p>
   )
 }
 

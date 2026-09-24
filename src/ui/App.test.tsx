@@ -273,6 +273,41 @@ describe('App', () => {
       expect(screen.getAllByText(/ในงวดที่ 4 \(24 ม\.ค\. 70\)/)).toHaveLength(2)
     })
 
+    it('repeats a yearly lump sum on the same day each year', async () => {
+      const user = userEvent.setup()
+      render(<App />)
+
+      const currentPayoff = () => monthsFrom(screen.getAllByText(/หมดหนี้ใน/)[0].textContent ?? '')
+
+      await user.clear(screen.getByLabelText(/วันชำระงวดถัดไป/))
+      await user.type(screen.getByLabelText(/วันชำระงวดถัดไป/), '2026-10-24')
+      await enterLumpSum(user, '100000', '2026-12-31')
+      await user.click(calculateButton())
+      const once = currentPayoff()
+
+      await user.click(screen.getByRole('radio', { name: /ทุกปี/ }))
+      expect(screen.getByLabelText(/วันที่โปะครั้งแรก/)).toBeInTheDocument()
+      await user.click(calculateButton())
+
+      expect(currentPayoff()).toBeLessThan(once)
+      // Each 31 Dec lump joins the 24 Jan instalment after it, twelve apart.
+      const [currentNote] = screen.getAllByText(/โปะเงินก้อน \d+ ครั้ง/)
+      expect(currentNote).toHaveTextContent('ครั้งแรกงวดที่ 4 (24 ม.ค. 70)')
+      const [firstTable] = screen.getAllByRole('table')
+      await user.click(screen.getAllByRole('button', { name: /ดูทั้งหมด/ })[0])
+      const month16 = within(firstTable).getAllByRole('row')[16]
+      expect(month16).toHaveTextContent('24 ม.ค. 71')
+      expect(month16).toHaveTextContent(/รวมโปะก้อน ฿100,000/)
+    })
+
+    it('treats a lump sum saved before the repeat option as one-off', () => {
+      localStorage.setItem('home-loan:lump-sum', JSON.stringify({ amount: 100000, date: '2026-12-31' }))
+      render(<App />)
+
+      expect(screen.getByRole('radio', { name: 'ครั้งเดียว' })).toBeChecked()
+      expect(calculateButton()).toBeDisabled()
+    })
+
     it('asks for a date once an amount is entered', async () => {
       const user = userEvent.setup()
       render(<App />)

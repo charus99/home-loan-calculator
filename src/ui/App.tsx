@@ -105,17 +105,46 @@ interface CalculationInputs {
   costs: RefinanceCosts
   /** Due date of the next instalment, as the date input gives it: YYYY-MM-DD. */
   nextPaymentDate: string
-  /** A one-off payment applied to both loans alike. An amount of 0 means none. */
+  /** A lump sum applied to both loans alike. An amount of 0 means none. */
   lumpSum: StoredLumpSum
 }
 
+type LumpSumRepeat = 'once' | 'yearly'
+
 interface StoredLumpSum {
   amount: number
-  /** YYYY-MM-DD, or empty when not set. */
+  /** YYYY-MM-DD, or empty when not set. For a yearly lump, the first one. */
   date: string
+  /** Absent in values saved before yearly lumps existed, which were one-off. */
+  repeat?: LumpSumRepeat
 }
 
-const NO_LUMP_SUM: StoredLumpSum = { amount: 0, date: '' }
+const NO_LUMP_SUM: StoredLumpSum = { amount: 0, date: '', repeat: 'once' }
+
+/**
+ * Every payment a lump-sum entry stands for, up to the end of the schedule.
+ *
+ * A yearly lump repeats on the same calendar day; the schedule simply stops
+ * applying them once the loan has cleared, so running to the ceiling is safe.
+ */
+function expandLumpSum(
+  firstPaidOn: Date,
+  amount: number,
+  repeat: LumpSumRepeat,
+  scheduleEnd: Date,
+): LumpSum[] {
+  if (repeat === 'once') {
+    return [{ date: firstPaidOn, amount }]
+  }
+  const lumps: LumpSum[] = []
+  for (let year = 0; ; year++) {
+    const date = paymentDate(firstPaidOn, year * 12)
+    if (date > scheduleEnd) {
+      return lumps
+    }
+    lumps.push({ date, amount })
+  }
+}
 
 /**
  * Reads a YYYY-MM-DD value as a local calendar date.
@@ -168,8 +197,15 @@ function runComparison({
       // Before the period now running, so the balance entered already
       // reflects it — counting it again would credit the payment twice.
       problems.push('วันที่โปะเงินก้อนต้องไม่ก่อนงวดที่กำลังผ่อนอยู่')
-    } else {
-      lumpSums.push({ date: paidOn, amount: lumpSum.amount })
+    } else if (firstPaymentDate) {
+      lumpSums.push(
+        ...expandLumpSum(
+          paidOn,
+          lumpSum.amount,
+          lumpSum.repeat ?? 'once',
+          paymentDate(firstPaymentDate, MAX_TERM_MONTHS),
+        ),
+      )
     }
   }
 
@@ -237,7 +273,13 @@ export default function App() {
   // Results come from the inputs as they stood at the last press of the
   // calculate button, not from what is being typed. Opening the page counts as
   // a press, so a returning visitor sees their figures straight away.
-  const [lumpSum, setLumpSum] = useStoredState('home-loan:lump-sum', NO_LUMP_SUM)
+  const [lumpSum, setLumpSum] = useStoredState(
+    'home-loan:lump-sum',
+    NO_LUMP_SUM,
+    // Fills in repeat for values saved before it existed, so choosing the
+    // option they already mean does not register as an edit.
+    (parsed) => ({ ...NO_LUMP_SUM, ...(parsed as StoredLumpSum) }),
+  )
 
   const [calculated, setCalculated] = useState<CalculationInputs>(() => ({
     currentLoan,
@@ -363,7 +405,9 @@ export default function App() {
               help="ใส่ 0 ถ้าไม่โปะ"
             />
             <label className="block">
-              <span className="ink text-sm font-medium">วันที่โปะ</span>
+              <span className="ink text-sm font-medium">
+                {lumpSum.repeat === 'yearly' ? 'วันที่โปะครั้งแรก' : 'วันที่โปะ'}
+              </span>
               <input
                 type="date"
                 className="field mt-1 block w-full px-3 py-2"
@@ -372,6 +416,28 @@ export default function App() {
               />
             </label>
           </div>
+          <fieldset className="mt-4">
+            <legend className="ink text-sm font-medium">ความถี่</legend>
+            <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+              {(
+                [
+                  ['once', 'ครั้งเดียว'],
+                  ['yearly', 'ทุกปี วันเดียวกัน ยอดเท่ากัน จนหมดหนี้'],
+                ] as const
+              ).map(([repeat, label]) => (
+                <label key={repeat} className="ink flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="lump-sum-repeat"
+                    value={repeat}
+                    checked={(lumpSum.repeat ?? 'once') === repeat}
+                    onChange={() => setLumpSum({ ...lumpSum, repeat })}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
         </section>
 
         <StepLabel step={2} title="ค่าใช้จ่ายรีไฟแนนซ์" className="mt-8" />
