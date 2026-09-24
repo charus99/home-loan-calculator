@@ -193,6 +193,71 @@ describe('break-even point', () => {
   })
 })
 
+describe('break-even at the same instalment', () => {
+  // The default screen: both loans pay 17,100, so the cash going out each
+  // month is identical until the cheaper loan clears.
+  const samePayment = {
+    principal: 2_400_000,
+    termMonths: 480,
+    monthlyPayment: 17_100,
+    startDate: START_DATE,
+  }
+  const incumbent: LoanTerms = {
+    ...samePayment,
+    rateTiers: [{ fromMonth: 1, annualRatePercent: 6.5 }],
+  }
+  const offer: LoanTerms = {
+    ...samePayment,
+    rateTiers: [
+      { fromMonth: 1, annualRatePercent: 3 },
+      { fromMonth: 37, annualRatePercent: 4.75 },
+    ],
+  }
+
+  it('recovers the costs within months, not when the new loan clears', () => {
+    // Measured on cash paid out this read month 194. The interest avoided
+    // covers 28,200 of costs within the first few months.
+    const result = compareRefinance(incumbent, offer, { mortgageRegistration: 28_200 })
+    expect(result.breakEvenMonth).not.toBeNull()
+    expect(result.breakEvenMonth!).toBeLessThanOrEqual(6)
+    expect(result.breakEvenMonth!).toBeLessThan(result.alternative.monthsToPayoff)
+  })
+
+  it('ends the running total exactly at the net saving', () => {
+    // The chart and the headline figure must tell the same story.
+    const result = compareRefinance(incumbent, offer, { mortgageRegistration: 28_200 })
+    expect(result.cumulativeNet.at(-1)).toBeCloseTo(result.netSaving, 2)
+  })
+})
+
+describe('break-even that does not hold', () => {
+  it('ignores an early crossing that a later rate rise undoes', () => {
+    // Cheap for two years, then dear: savings build early and are then
+    // clawed back, so the move never truly pays for itself.
+    const incumbent: LoanTerms = {
+      principal: 2_000_000,
+      rateTiers: [{ fromMonth: 1, annualRatePercent: 5 }],
+      termMonths: 480,
+      monthlyPayment: 15_000,
+      startDate: START_DATE,
+    }
+    const teaser: LoanTerms = {
+      ...incumbent,
+      rateTiers: [
+        { fromMonth: 1, annualRatePercent: 1 },
+        { fromMonth: 25, annualRatePercent: 7 },
+      ],
+    }
+    const result = compareRefinance(incumbent, teaser, { mortgageRegistration: 5_000 })
+
+    // The running total does go positive at some point...
+    expect(Math.max(...result.cumulativeNet)).toBeGreaterThan(0)
+    // ...but the deal loses overall, so no break-even is reported.
+    expect(result.netSaving).toBeLessThan(0)
+    expect(result.breakEvenMonth).toBeNull()
+  })
+})
+
 describe('compareExtraPayment', () => {
   it('shows interest saved and a shorter payoff', () => {
     const result = compareExtraPayment(currentLoan, 5_000)
@@ -203,10 +268,11 @@ describe('compareExtraPayment', () => {
   it('has no costs to recover, so it pays off from the first month', () => {
     const result = compareExtraPayment(currentLoan, 5_000)
     expect(result.totalCosts).toBe(0)
-    // Paying extra means a bigger outlay early, so the cumulative position
-    // starts negative and only turns positive once the loan clears early.
-    expect(result.cumulativeNet[0]).toBeLessThan(0)
-    expect(result.breakEvenMonth).not.toBeNull()
+    // With nothing to recover, every baht of interest avoided is already
+    // ahead, so the position never goes negative. (Month one's interest is
+    // the same on both, since the extra payment lands after it accrues.)
+    expect(Math.min(...result.cumulativeNet)).toBeGreaterThanOrEqual(0)
+    expect(result.breakEvenMonth).toBe(1)
   })
 
   it('saves more the more is paid', () => {

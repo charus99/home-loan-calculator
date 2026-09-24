@@ -83,7 +83,7 @@ export function ComparisonSummary({ comparison }: ComparisonSummaryProps) {
             </dd>
           </div>
           <div>
-            <dt className="ink text-sm">ค่าใช้จ่ายคืนทุน</dt>
+            <dt className="ink text-sm">ดอกที่ประหยัดได้ครอบคลุมค่าใช้จ่าย</dt>
             <dd className="ink-strong text-xl font-semibold">
               {comparison.breakEvenMonth === null
                 ? 'ไม่คืนทุน'

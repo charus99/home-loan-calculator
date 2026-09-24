@@ -19,11 +19,11 @@ interface BreakEvenChartProps {
 }
 
 /**
- * Cumulative position after refinancing: costs first, savings after.
+ * Interest saved to date, less the up-front costs.
  *
- * The line starts below zero by the up-front costs and climbs as the cheaper
- * loan saves money each month. Where it crosses zero is the break-even point —
- * refinance and move before that month and the switch has cost money.
+ * The line starts below zero by the costs and climbs by the interest the new
+ * loan does not charge each month. Where it crosses zero for good is the
+ * break-even point; it ends at the net saving shown in the verdict.
  */
 export function BreakEvenChart({ comparison }: BreakEvenChartProps) {
   const theme = chartTheme(useTheme())
@@ -38,10 +38,12 @@ export function BreakEvenChart({ comparison }: BreakEvenChartProps) {
       description={
         breakEvenMonth === null
           ? 'ทางเลือกนี้ไม่คืนทุนตลอดอายุสัญญา'
-          : `เงินสดสะสมเทียบกับการอยู่ที่เดิม — ตัดศูนย์เดือนที่ ${breakEvenMonth} คือจุดที่ถอนทุนค่าใช้จ่ายคืนได้`
+          : `ดอกเบี้ยที่ประหยัดได้สะสม หักค่าใช้จ่ายรีไฟแนนซ์ — ตัดศูนย์เดือนที่ ${breakEvenMonth} คือจุดที่ค่าใช้จ่ายถูกชดเชยหมด`
       }
     >
-      <AreaChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+      {/* Extra top margin: the break-even label sits above the plot and was
+          clipped at 8px. */}
+      <AreaChart data={data} margin={{ top: 24, right: 16, bottom: 8, left: 8 }}>
         <CartesianGrid stroke={theme.chrome.gridline} vertical={false} />
         <XAxis
           dataKey="month"

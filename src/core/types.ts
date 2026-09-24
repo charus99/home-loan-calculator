@@ -102,11 +102,14 @@ export interface RefinanceComparison {
   /** Interest saved after costs. This is the figure that answers "is it worth it". */
   netSaving: number
   /**
-   * Months until cumulative savings overtake the up-front costs, or null when
-   * that never happens within the compared term.
+   * The month from which the interest saved so far covers the up-front costs
+   * for good, or null when the move never pays for itself.
    */
   breakEvenMonth: number | null
-  /** Cumulative net position at each month, for plotting the break-even chart. */
+  /**
+   * Interest saved to date minus the up-front costs, month by month, for the
+   * break-even chart. Starts at minus the costs and ends at netSaving.
+   */
   cumulativeNet: number[]
   /** Months cut from the payoff date. Negative means the new loan runs longer. */
   monthsSaved: number

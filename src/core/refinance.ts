@@ -53,30 +53,39 @@ export function compareRefinance(
   const cumulativeNet: number[] = []
 
   // The borrower is out of pocket by the costs on day one, and each month
-  // recovers the difference between what the two loans would have charged.
+  // recovers the interest the new loan did not charge.
+  //
+  // Interest rather than cash paid out: when both loans carry the same
+  // instalment the monthly outlay is identical, so a cash measure stays flat
+  // until the cheaper loan clears — reporting break-even in year sixteen for a
+  // move that has recovered its costs within months. The interest not charged
+  // goes to principal instead, which is money kept, from the first month.
+  //
+  // Measured this way the series ends exactly at netSaving, and a smaller
+  // instalment that costs more interest overall can never read as paying off.
   let runningNet = -totalCosts
-  let breakEvenMonth: number | null = null
+  let lastMonthBelowZero = 0
 
   for (let index = 0; index < horizon; index++) {
-    const currentRow = current.rows[index]
-    const alternativeRow = alternative.rows[index]
-
-    // A cleared loan costs nothing further, so a schedule that has ended
+    // A cleared loan charges nothing further, so a schedule that has ended
     // contributes zero rather than dropping out of the comparison.
-    const currentOutlay = currentRow ? currentRow.payment : 0
-    const alternativeOutlay = alternativeRow ? alternativeRow.payment : 0
+    const currentInterest = current.rows[index]?.interest ?? 0
+    const alternativeInterest = alternative.rows[index]?.interest ?? 0
 
-    runningNet += currentOutlay - alternativeOutlay
+    runningNet += currentInterest - alternativeInterest
     cumulativeNet.push(runningNet)
 
-    // A smaller instalment puts the monthly cash flow ahead within months even
-    // when the loan ends up costing more interest overall. Reporting that as
-    // "break-even" would recommend exactly the deal this calculator exists to
-    // warn about, so the crossing only counts when the move actually pays off.
-    if (breakEvenMonth === null && runningNet >= 0 && netSaving > 0) {
-      breakEvenMonth = index + 1
+    if (runningNet < 0) {
+      lastMonthBelowZero = index + 1
     }
   }
+
+  // The month from which the move stays paid for. A promotional rate can put
+  // the running total ahead early and then drag it back below zero once the
+  // rate steps up; the first crossing would promise a recovery that does not
+  // hold.
+  const breakEvenMonth =
+    netSaving > 0 && lastMonthBelowZero < horizon ? lastMonthBelowZero + 1 : null
 
   return {
     current,
